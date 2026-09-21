@@ -1,0 +1,51 @@
+{
+  "service": "Esri ArcGIS World Imagery",
+  "service_url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
+  "metadata_url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer?f=pjson",
+  "attribution": "Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community",
+  "provider_information_url": "https://goto.arcgisonline.com/maps/World_Imagery",
+  "download_date": "2026-09-17",
+  "note": "Unmodified real basemap exports. These are illustrative geographic backgrounds. Project case overlays and evidence remain fictional and separate.",
+  "assets": [
+    {
+      "file": "ethiopia-satellite.jpg",
+      "width": 1200,
+      "height": 800,
+      "crs": "EPSG:4326",
+      "bbox": [
+        31.000000000000004,
+        2.9999999999999964,
+        49,
+        14.999999999999996
+      ],
+      "bbox_order": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "request_url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?f=image&bbox=31,3,49,15&bboxSR=4326&imageSR=4326&size=1200,800&dpi=96&format=jpg&transparent=false",
+      "imagery_capture_date": "Not verified; do not label as live imagery or with a capture date."
+    },
+    {
+      "file": "shakiso-satellite.jpg",
+      "width": 1200,
+      "height": 800,
+      "crs": "EPSG:4326",
+      "bbox": [
+        38.894999999999996,
+        5.739999999999999,
+        38.98499999999999,
+        5.799999999999999
+      ],
+      "bbox_order": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "request_url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?f=image&bbox=38.895,5.74,38.985,5.8&bboxSR=4326&imageSR=4326&size=1200,800&dpi=96&format=jpg&transparent=false",
+      "imagery_capture_date": "Not verified; do not label as live imagery or with a capture date."
+    }
+  ]
+}
