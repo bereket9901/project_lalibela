@@ -1,95 +1,4115 @@
-'use client';
-import React,{useState,useEffect,useMemo,useRef} from 'react';
-import {LayoutDashboard,ScanLine,FolderOpen,FileText,Users,Settings,Smartphone,MapPin,Globe,ChevronRight,ChevronLeft,ArrowUpRight,ArrowRight,Plus,Minus,Layers,Upload,Satellite,ShieldCheck,Eye,LogOut,Search,List,Map as MapIcon,Check,CheckCircle2,Clock,Navigation,Crosshair,Camera,LockKeyhole,Info,FlaskConical,Download,CalendarDays,SlidersHorizontal,Activity,RefreshCw,Signal,Wifi,BatteryFull,TriangleAlert,X,PanelLeft,ExternalLink,UserRound,Send,FileImage,ChevronDown,Loader2} from 'lucide-react';
-import {SidebarProvider,Sidebar,SidebarContent,SidebarHeader,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarInset,SidebarTrigger,useSidebar} from '@/components/ui/sidebar';
-import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';
-import {Tabs,TabsList,TabsTrigger,TabsContent} from '@/components/ui/tabs';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
-import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
-import {Checkbox} from '@/components/ui/checkbox';
-import {Switch} from '@/components/ui/switch';
-import {Progress} from '@/components/ui/progress';
-import {Table,TableHeader,TableHead,TableBody,TableRow,TableCell} from '@/components/ui/table';
-import {Empty,EmptyHeader,EmptyTitle,EmptyDescription} from '@/components/ui/empty';
-import {Toaster} from '@/components/ui/sonner';
-import {toast} from 'sonner';
-import {STATUSES,ROLES,MODELS,OUTCOMES,AREAS,REGIONS,USERS,INITIAL_CASES,initials,distanceMeters,isLocationVerified,displayTime,type MiningCase,type Role,type User,type Status,type Inspection} from './data';
+"use client";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  LayoutDashboard,
+  ScanLine,
+  FolderOpen,
+  FileText,
+  Users,
+  Settings,
+  Smartphone,
+  MapPin,
+  Globe,
+  ChevronRight,
+  ChevronLeft,
+  ArrowUpRight,
+  ArrowRight,
+  Plus,
+  Minus,
+  Layers,
+  Upload,
+  Satellite,
+  ShieldCheck,
+  Eye,
+  LogOut,
+  Search,
+  List,
+  Map as MapIcon,
+  Check,
+  CheckCircle2,
+  Clock,
+  Navigation,
+  Crosshair,
+  Camera,
+  LockKeyhole,
+  Info,
+  FlaskConical,
+  Download,
+  CalendarDays,
+  SlidersHorizontal,
+  Activity,
+  RefreshCw,
+  Signal,
+  Wifi,
+  BatteryFull,
+  TriangleAlert,
+  X,
+  PanelLeft,
+  ExternalLink,
+  UserRound,
+  Send,
+  FileImage,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import {
+  STATUSES,
+  ROLES,
+  MODELS,
+  OUTCOMES,
+  AREAS,
+  REGIONS,
+  USERS,
+  INITIAL_CASES,
+  initials,
+  distanceMeters,
+  isLocationVerified,
+  displayTime,
+  type MiningCase,
+  type Role,
+  type User,
+  type Status,
+  type Inspection,
+} from "./data";
 
-type Page='dashboard'|'analysis'|'cases'|'reports'|'users'|'settings'|'mobile';
-type Gps={lat:number;lng:number;accuracy:number;at:number;source:'Device GPS'|'Simulated GPS'};
-type Finding={id:string;created:string;title:string;confidence:number;description:string;reviewed:boolean;caseId?:string;area:typeof AREAS[number];capture:string;models:string[];image?:string;imageName:string};
-const STATUS_COLORS=['#91a4b1','#658ab0','#dda54c','#9186b2','#559381'];
-const statusTone=(s:string)=>s==='New'?'outline':s==='Assigned'?'blue':s==='Under Inspection'?'amber':s==='Inspection Submitted'?'purple':'green';
-function Brand(){return <div className="brand"><svg className="brandmark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#207b71"/><path d="M10 26 20 9l10 17H10Z" stroke="white" strokeWidth="1.8"/><path d="M15 26 20 17l5 9M10 31h20" stroke="#b3ddd0" strokeWidth="1.5"/></svg><div><div className="brandname">LALIBELA</div><div className="brandcaption">MINING INTELLIGENCE</div></div></div>}
-function Btn({children,primary=false,className='',...props}:React.ButtonHTMLAttributes<HTMLButtonElement>&{primary?:boolean}){return <button {...props} className={`btn ${primary?'primary':''} ${className}`}>{children}</button>}
-function Pick({value,onChange,options,label}: {value:string;onChange:(v:string)=>void;options:(string|{value:string;label:string})[];label:string}){return <Select value={value} onValueChange={onChange}><SelectTrigger className="select-trigger" aria-label={label}><SelectValue/></SelectTrigger><SelectContent>{options.map(o=><SelectItem key={typeof o==='string'?o:o.value} value={typeof o==='string'?o:o.value}>{typeof o==='string'?o:o.label}</SelectItem>)}</SelectContent></Select>}
-function StatusBadge({status}:{status:Status}){return <span className={`badge ${statusTone(status)}`}>{status}</span>}
-function Note({children,amber=false}:{children:React.ReactNode;amber?:boolean}){return <div className={`note ${amber?'amber':''}`}><Info/>{children}</div>}
-function Flow({status}:{status:Status}){return <div className="workflow" aria-label={`Case workflow: ${STATUSES.join(' → ')}. Current: ${status}`}>{STATUSES.map((s,i)=><div key={s} className={`workflow-step ${i<=STATUSES.indexOf(status)?'done':''} ${s===status?'current':''}`}>{s}</div>)}</div>}
-function PageHead({title,subtitle,children}:{title:string;subtitle:string;children?:React.ReactNode}){return <div className="pagehead"><div><h1>{title}</h1><p>{subtitle}</p></div><div className="flexline wrap">{children}</div></div>}
-function Stats({cases,extra=0}:{cases:MiningCase[];extra?:number}){const inspected=cases.filter(c=>c.inspection);return <div className="statgrid">{[{label:'Monitored mining areas',value:new Set(cases.map(c=>c.area)).size,icon:MapIcon,foot:'Across '+new Set(cases.map(c=>c.region)).size+' regions',color:false},{label:'AI suspected violations',value:cases.reduce((s,c)=>s+c.detections,0)+extra,icon:ScanLine,foot:'Pending or previously field reviewed',color:false},{label:'Cases created',value:cases.length,icon:FolderOpen,foot:`${cases.filter(c=>c.status!=='Closed').length} active cases`,color:true},{label:'Inspections submitted',value:inspected.length,icon:ShieldCheck,foot:`${inspected.filter(c=>c.inspection?.outcome===OUTCOMES[0]).length} confirmed · ${inspected.filter(c=>c.inspection?.outcome===OUTCOMES[1]).length} no violation`,color:true}].map(v=><div className="panel stat" key={v.label}><div className="stat-top">{v.label}<div className="stat-icon"><v.icon/></div></div><div className="statvalue">{String(v.value).padStart(2,'0')}</div><div className="statfoot">{v.color?<strong>{v.foot}</strong>:v.foot}</div></div>)}</div>}
-function MiningMap({cases,selected,onSelect,detail=false,image,polygons=false,running=false}:{cases:MiningCase[];selected?:string;onSelect?:(c:MiningCase)=>void;detail?:boolean;image?:string;polygons?:boolean;running?:boolean}){
- const [zoom,setZoom]=useState(1),[layer,setLayer]=useState('Satellite'),[chosen,setChosen]=useState<string|null>(null);const popup=cases.find(c=>c.id===chosen);const grouped=Array.from(new Map([...cases].reverse().map(c=>[c.area,c])).values()).map(c=>cases.find(x=>x.area===c.area&&x.status!=='Closed')||c);
- return <div className={`map ${detail?'detail':'national'} ${layer==='Satellite'?'satellite':''}`}><div className="mapcanvas" style={{transform:`scale(${zoom})`}}><img src={image|| (detail?'/shakiso-satellite.jpg':'/ethiopia-satellite.jpg')} alt={detail?'Illustrative satellite imagery near Shakiso; capture date unverified':'Satellite basemap of Ethiopia and surrounding countries'} style={{filter:layer==='Terrain'?'saturate(.2) brightness(1.55) contrast(.58)':'saturate(.6) brightness(.85)'}}/><div className="mapgrid"/>{!detail&&<><span className="region-label" style={{left:'41%',top:'40%',fontSize:18,letterSpacing:4}}>ETHIOPIA</span><span className="region-label" style={{left:'15%',top:'19%'}}>SUDAN</span><span className="region-label" style={{left:'71%',top:'63%'}}>SOMALIA</span><span className="region-label" style={{left:'41%',top:'94%'}}>KENYA</span><span className="region-label" style={{left:'41%',top:'49%',fontSize:10,letterSpacing:0}}>◎ Addis Ababa</span></>}{!detail&&grouped.map((c,i)=><button key={c.area} aria-label={`Open ${c.area}, ${cases.filter(x=>x.area===c.area).length} cases`} className={`mapmarker ${c.status==='Closed'?'closed':''} ${c.id===selected?'selected':''}`} style={{left:`${(c.lng-31)/18*100}%`,top:`${(15-c.lat)/12*100}%`}} onClick={()=>setChosen(c.id)}><span style={c.area.startsWith('Adola')?{top:-29,left:5}:c.area.startsWith('Kenticha')?{top:14,left:16}:undefined}>{c.area.split(' ·')[0]}</span></button>)}{polygons&&<svg className="resultpolygons" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-label="Three fictional areas of suspected mining activity"><polygon points="390,370 550,330 650,425 590,540 410,515" stroke="#efb651" strokeWidth="3" fill="#efb6512b" strokeDasharray="8 5"/><polygon points="695,215 815,243 845,339 730,358 675,285" stroke="#efb651" strokeWidth="3" fill="#efb65126" strokeDasharray="8 5"/><polygon points="220,200 312,230 332,299 235,322 200,263" stroke="#efb651" strokeWidth="3" fill="#efb65126" strokeDasharray="8 5"/><circle cx="500" cy="420" r="19" fill="#f2b855"/><text x="500" y="427" textAnchor="middle" fontSize="21" fontFamily="Arial" fill="#1c352e">1</text><circle cx="760" cy="278" r="19" fill="#f2b855"/><text x="760" y="285" textAnchor="middle" fontSize="21" fontFamily="Arial" fill="#1c352e">2</text><circle cx="268" cy="270" r="19" fill="#f2b855"/><text x="268" y="277" textAnchor="middle" fontSize="21" fontFamily="Arial" fill="#1c352e">3</text></svg>}</div><div className="maplayers">{['Satellite','Terrain'].map(l=><button key={l} className={layer===l?'active':''} onClick={()=>setLayer(l)}>{l==='Terrain'?'Muted basemap':l}</button>)}</div><div className="maptools"><button aria-label="Zoom in" onClick={()=>setZoom(v=>Math.min(3,v+.35))}><Plus/></button><button aria-label="Zoom out" onClick={()=>setZoom(v=>Math.max(1,v-.35))}><Minus/></button><button aria-label="Reset map view" onClick={()=>{setZoom(1);setChosen(null)}}><Crosshair/></button></div>{popup&&!detail&&<div className="map-popup"><div className="between"><span className="caseid">{popup.id}</span><button aria-label="Close map detail" onClick={()=>setChosen(null)}><X size={14}/></button></div><h3 style={{marginTop:8}}>{popup.area}</h3><p>{cases.filter(c=>c.area===popup.area).length} cases · {popup.region}</p><button className="textbtn" onClick={()=>onSelect?.(popup)}>View case <ArrowRight/></button></div>}{!cases.length&&!detail&&<div className="mapempty"><span className="badge">No cases match these filters</span></div>}{running&&<div className="scanline"/>}<div className="mapcaption">Illustrative basemap · fictional case overlays<br/><a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noreferrer">Esri, Vantor, Earthstar Geographics, GIS User Community</a></div></div>
+type Page =
+  | "dashboard"
+  | "analysis"
+  | "cases"
+  | "reports"
+  | "users"
+  | "settings"
+  | "mobile";
+type Gps = {
+  lat: number;
+  lng: number;
+  accuracy: number;
+  at: number;
+  source: "Device GPS" | "Simulated GPS";
+};
+type Finding = {
+  id: string;
+  created: string;
+  title: string;
+  confidence: number;
+  description: string;
+  reviewed: boolean;
+  caseId?: string;
+  area: (typeof AREAS)[number];
+  capture: string;
+  models: string[];
+  image?: string;
+  imageName: string;
+};
+const STATUS_COLORS = ["#91a4b1", "#658ab0", "#dda54c", "#9186b2", "#559381"];
+const statusTone = (s: string) =>
+  s === "New"
+    ? "outline"
+    : s === "Assigned"
+      ? "blue"
+      : s === "Under Inspection"
+        ? "amber"
+        : s === "Inspection Submitted"
+          ? "purple"
+          : "green";
+function Brand() {
+  return (
+    <div className="brand">
+      <svg
+        className="brandmark"
+        viewBox="0 0 40 40"
+        fill="none"
+        aria-hidden="true"
+      >
+        <rect width="40" height="40" rx="10" fill="#207b71" />
+        <path d="M10 26 20 9l10 17H10Z" stroke="white" strokeWidth="1.8" />
+        <path
+          d="M15 26 20 17l5 9M10 31h20"
+          stroke="#b3ddd0"
+          strokeWidth="1.5"
+        />
+      </svg>
+      <div>
+        <div className="brandname">LALIBELA</div>
+        <div className="brandcaption">MINING INTELLIGENCE</div>
+      </div>
+    </div>
+  );
 }
-function CaseTable({cases,users,onSelect,caption='Case register'}:{cases:MiningCase[];users:User[];onSelect:(c:MiningCase)=>void;caption?:string}){return <div className="panel casestable"><div className="panelhead between"><div className="flexline"><h2>{caption}</h2><span className="badge">{cases.length}</span></div><span className="small muted">Latest cases first</span></div><Table><TableHeader><TableRow><TableHead>Case ID</TableHead><TableHead>Mining area</TableHead><TableHead>Assigned inspector</TableHead><TableHead>Priority</TableHead><TableHead>Case status</TableHead><TableHead><span className="sr-only">Open</span></TableHead></TableRow></TableHeader><TableBody>{cases.map(c=><TableRow key={c.id} onClick={()=>onSelect(c)}><TableCell><button className="caseid" onClick={e=>{e.stopPropagation();onSelect(c)}}>{c.id}</button></TableCell><TableCell><div className="caselocation">{c.area}<small>{c.region}</small></div></TableCell><TableCell>{c.inspector?<div className="flexline"><span className="avatar">{initials(users.find(u=>u.id===c.inspector)?.name||'?')}</span>{users.find(u=>u.id===c.inspector)?.name}</div>:<span className="muted">Unassigned</span>}</TableCell><TableCell><span className={`badge ${c.priority==='High'?'amber':'outline'}`}>{c.priority}</span></TableCell><TableCell><StatusBadge status={c.status}/></TableCell><TableCell><ChevronRight size={15} color="#9babb4"/></TableCell></TableRow>)}{!cases.length&&<TableRow><TableCell colSpan={6} className="table-empty">No cases match the selected filters.</TableCell></TableRow>}</TableBody></Table><div className="tablefoot"><span>Showing {cases.length} case{cases.length!==1?'s':''}</span><span>All dates in East Africa Time</span></div></div>}
-function FilterBar({region,setRegion,status,setStatus,start,setStart,end,setEnd,children,onReset}:{region:string;setRegion:(s:string)=>void;status?:string;setStatus?:(s:string)=>void;start:string;setStart:(s:string)=>void;end:string;setEnd:(s:string)=>void;children?:React.ReactNode;onReset?:()=>void}){return <div className="filterbar"><label className="field"><span>Location</span><Pick value={region} onChange={setRegion} options={['All locations',...REGIONS]} label="Filter by location"/></label><label className="field"><span>From</span><input type="date" value={start} aria-label="Start date" onChange={e=>setStart(e.target.value)}/></label><label className="field"><span>To</span><input type="date" value={end} aria-label="End date" onChange={e=>setEnd(e.target.value)}/></label>{setStatus&&<label className="field"><span>Case status</span><Pick value={status||'All statuses'} onChange={setStatus} options={['All statuses',...STATUSES]} label="Filter by case status"/></label>}{children}<button className="btn ghost" onClick={()=>{setRegion('All locations');setStatus?.('All statuses');setStart('2026-09-01');setEnd('2026-09-30');onReset?.()}}><RefreshCw size={14}/>Reset</button></div>}
-
-function Login({users,onLogin,onMobile}:{users:User[];onLogin:(u:User)=>void;onMobile:()=>void}){
- const [kind,setKind]=useState('user'),[uid,setUid]=useState('u2'),[email,setEmail]=useState('operator@lalibela.demo'),[password,setPassword]=useState('Lalibela2026!'),[error,setError]=useState('');const options=users.filter(u=>kind==='admin'?u.role==='Administrator':u.role!=='Administrator');
- const choose=(id:string)=>{setUid(id);setEmail(users.find(u=>u.id===id)?.email||'');setError('')};
- return <div className="login"><div className="login-visual"><div className="login-map"><img src="/ethiopia-satellite.jpg" alt="Satellite basemap of Ethiopia"/><div className="mapgrid"/></div><div className="login-overlay"/><Brand/><div className="login-caption"><div className="eyebrow">PROJECT LALIBELA · ETHIOPIA</div><h2>Satellite insight.<br/>Field-verified action.</h2><p>One workspace to monitor mining areas, investigate suspected violations, and record what happens on the ground.</p></div><div className="login-footer"><span>ILLUSTRATIVE BASEMAP</span><a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noreferrer">Esri and imagery contributors ↗</a></div></div><div className="login-form-wrap"><div className="login-form"><span className="demo-label"><FlaskConical/>INTERACTIVE PROTOTYPE</span><h1>Welcome to Lalibela</h1><p className="muted">Sign in to your mining intelligence workspace.</p><Tabs value={kind} onValueChange={v=>{setKind(v);choose(v==='admin'?'u1':'u2')}}><TabsList className="w-full h-11"><TabsTrigger value="user" className="flex-1"><UserRound size={15}/>User Login</TabsTrigger><TabsTrigger value="admin" className="flex-1"><ShieldCheck size={15}/>Admin Login</TabsTrigger></TabsList></Tabs><form onSubmit={e=>{e.preventDefault();const u=users.find(u=>u.email.toLowerCase()===email.toLowerCase()&&options.some(o=>o.id===u.id));if(!u||password!=='Lalibela2026!')return setError('Use the prefilled sample credentials. Demo password: Lalibela2026!');if(!u.active)return setError('This user is deactivated. Select an active demo account.');onLogin(u)}}><label className="field"><span>Sample account</span><Pick value={uid} onChange={choose} options={options.map(u=>({value:u.id,label:`${u.name} · ${u.role}`}))} label="Sample account"/></label><label className="field"><span>Email address</span><input type="email" value={email} autoComplete="off" onChange={e=>setEmail(e.target.value)} required/></label><label className="field"><span>Password</span><input type="password" value={password} autoComplete="off" onChange={e=>setPassword(e.target.value)} required/></label>{error&&<p className="error" role="alert">{error}</p>}<Btn primary type="submit">Sign in to workspace <ArrowRight/></Btn></form><p className="subtext" style={{fontSize:12,textAlign:'center',marginTop:12}}>Demo credentials are prefilled. Use sample accounts only.</p><div className="login-divider"/><div className="between"><div><h3 style={{fontSize:14}}>Working in the field?</h3><p className="subtext" style={{fontSize:12}}>Explore the inspector mobile app.</p></div><button className="textbtn" onClick={onMobile}><Smartphone/>Open app <ArrowUpRight/></button></div></div><p className="login-form-footer">Sample data and simulated AI results. Changes last for this session. No real accounts or investigations are created.</p></div></div>
+function Btn({
+  children,
+  primary = false,
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean }) {
+  return (
+    <button
+      {...props}
+      className={`btn ${primary ? "primary" : ""} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+function Pick({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: (string | { value: string; label: string })[];
+  label: string;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="select-trigger" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem
+            key={typeof o === "string" ? o : o.value}
+            value={typeof o === "string" ? o : o.value}
+          >
+            {typeof o === "string" ? o : o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+function StatusBadge({ status }: { status: Status }) {
+  return <span className={`badge ${statusTone(status)}`}>{status}</span>;
+}
+function Note({
+  children,
+  amber = false,
+}: {
+  children: React.ReactNode;
+  amber?: boolean;
+}) {
+  return (
+    <div className={`note ${amber ? "amber" : ""}`}>
+      <Info />
+      {children}
+    </div>
+  );
+}
+function Flow({ status }: { status: Status }) {
+  return (
+    <div
+      className="workflow"
+      aria-label={`Case workflow: ${STATUSES.join(" → ")}. Current: ${status}`}
+    >
+      {STATUSES.map((s, i) => (
+        <div
+          key={s}
+          className={`workflow-step ${i <= STATUSES.indexOf(status) ? "done" : ""} ${s === status ? "current" : ""}`}
+        >
+          {s}
+        </div>
+      ))}
+    </div>
+  );
+}
+function PageHead({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="pagehead">
+      <div>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+      </div>
+      <div className="flexline wrap">{children}</div>
+    </div>
+  );
+}
+function Stats({ cases, extra = 0 }: { cases: MiningCase[]; extra?: number }) {
+  const inspected = cases.filter((c) => c.inspection);
+  return (
+    <div className="statgrid">
+      {[
+        {
+          label: "Monitored mining areas",
+          value: new Set(cases.map((c) => c.area)).size,
+          icon: MapIcon,
+          foot:
+            "Across " + new Set(cases.map((c) => c.region)).size + " regions",
+          color: false,
+        },
+        {
+          label: "AI suspected violations",
+          value: cases.reduce((s, c) => s + c.detections, 0) + extra,
+          icon: ScanLine,
+          foot: "Pending or previously field reviewed",
+          color: false,
+        },
+        {
+          label: "Cases created",
+          value: cases.length,
+          icon: FolderOpen,
+          foot: `${cases.filter((c) => c.status !== "Closed").length} active cases`,
+          color: true,
+        },
+        {
+          label: "Inspections submitted",
+          value: inspected.length,
+          icon: ShieldCheck,
+          foot: `${inspected.filter((c) => c.inspection?.outcome === OUTCOMES[0]).length} confirmed · ${inspected.filter((c) => c.inspection?.outcome === OUTCOMES[1]).length} no violation`,
+          color: true,
+        },
+      ].map((v) => (
+        <div className="panel stat" key={v.label}>
+          <div className="stat-top">
+            {v.label}
+            <div className="stat-icon">
+              <v.icon />
+            </div>
+          </div>
+          <div className="statvalue">{String(v.value).padStart(2, "0")}</div>
+          <div className="statfoot">
+            {v.color ? <strong>{v.foot}</strong> : v.foot}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function MiningMap({
+  cases,
+  selected,
+  onSelect,
+  detail = false,
+  image,
+  polygons = false,
+  running = false,
+}: {
+  cases: MiningCase[];
+  selected?: string;
+  onSelect?: (c: MiningCase) => void;
+  detail?: boolean;
+  image?: string;
+  polygons?: boolean;
+  running?: boolean;
+}) {
+  const [zoom, setZoom] = useState(1),
+    [layer, setLayer] = useState("Satellite"),
+    [chosen, setChosen] = useState<string | null>(null);
+  const popup = cases.find((c) => c.id === chosen);
+  const grouped = Array.from(
+    new Map([...cases].reverse().map((c) => [c.area, c])).values(),
+  ).map(
+    (c) => cases.find((x) => x.area === c.area && x.status !== "Closed") || c,
+  );
+  return (
+    <div
+      className={`map ${detail ? "detail" : "national"} ${layer === "Satellite" ? "satellite" : ""}`}
+    >
+      <div className="mapcanvas" style={{ transform: `scale(${zoom})` }}>
+        <img
+          src={
+            image ||
+            (detail ? "/shakiso-satellite.jpg" : "/ethiopia-satellite.jpg")
+          }
+          alt={
+            detail
+              ? "Illustrative satellite imagery near Shakiso; capture date unverified"
+              : "Satellite basemap of Ethiopia and surrounding countries"
+          }
+          style={{
+            filter:
+              layer === "Terrain"
+                ? "saturate(.2) brightness(1.55) contrast(.58)"
+                : "saturate(.6) brightness(.85)",
+          }}
+        />
+        <div className="mapgrid" />
+        {!detail && (
+          <>
+            <span
+              className="region-label"
+              style={{
+                left: "41%",
+                top: "40%",
+                fontSize: 18,
+                letterSpacing: 4,
+              }}
+            >
+              ETHIOPIA
+            </span>
+            <span className="region-label" style={{ left: "15%", top: "19%" }}>
+              SUDAN
+            </span>
+            <span className="region-label" style={{ left: "71%", top: "63%" }}>
+              SOMALIA
+            </span>
+            <span className="region-label" style={{ left: "41%", top: "94%" }}>
+              KENYA
+            </span>
+            <span
+              className="region-label"
+              style={{
+                left: "41%",
+                top: "49%",
+                fontSize: 10,
+                letterSpacing: 0,
+              }}
+            >
+              ◎ Addis Ababa
+            </span>
+          </>
+        )}
+        {!detail &&
+          grouped.map((c, i) => (
+            <button
+              key={c.area}
+              aria-label={`Open ${c.area}, ${cases.filter((x) => x.area === c.area).length} cases`}
+              className={`mapmarker ${c.status === "Closed" ? "closed" : ""} ${c.id === selected ? "selected" : ""}`}
+              style={{
+                left: `${((c.lng - 31) / 18) * 100}%`,
+                top: `${((15 - c.lat) / 12) * 100}%`,
+              }}
+              onClick={() => setChosen(c.id)}
+            >
+              <span
+                style={
+                  c.area.startsWith("Adola")
+                    ? { top: -29, left: 5 }
+                    : c.area.startsWith("Kenticha")
+                      ? { top: 14, left: 16 }
+                      : undefined
+                }
+              >
+                {c.area.split(" ·")[0]}
+              </span>
+            </button>
+          ))}
+        {polygons && (
+          <svg
+            className="resultpolygons"
+            viewBox="0 0 1200 800"
+            preserveAspectRatio="none"
+            aria-label="Three fictional areas of suspected mining activity"
+          >
+            <polygon
+              points="390,370 550,330 650,425 590,540 410,515"
+              stroke="#efb651"
+              strokeWidth="3"
+              fill="#efb6512b"
+              strokeDasharray="8 5"
+            />
+            <polygon
+              points="695,215 815,243 845,339 730,358 675,285"
+              stroke="#efb651"
+              strokeWidth="3"
+              fill="#efb65126"
+              strokeDasharray="8 5"
+            />
+            <polygon
+              points="220,200 312,230 332,299 235,322 200,263"
+              stroke="#efb651"
+              strokeWidth="3"
+              fill="#efb65126"
+              strokeDasharray="8 5"
+            />
+            <circle cx="500" cy="420" r="19" fill="#f2b855" />
+            <text
+              x="500"
+              y="427"
+              textAnchor="middle"
+              fontSize="21"
+              fontFamily="Arial"
+              fill="#1c352e"
+            >
+              1
+            </text>
+            <circle cx="760" cy="278" r="19" fill="#f2b855" />
+            <text
+              x="760"
+              y="285"
+              textAnchor="middle"
+              fontSize="21"
+              fontFamily="Arial"
+              fill="#1c352e"
+            >
+              2
+            </text>
+            <circle cx="268" cy="270" r="19" fill="#f2b855" />
+            <text
+              x="268"
+              y="277"
+              textAnchor="middle"
+              fontSize="21"
+              fontFamily="Arial"
+              fill="#1c352e"
+            >
+              3
+            </text>
+          </svg>
+        )}
+      </div>
+      <div className="maplayers">
+        {["Satellite", "Terrain"].map((l) => (
+          <button
+            key={l}
+            className={layer === l ? "active" : ""}
+            onClick={() => setLayer(l)}
+          >
+            {l === "Terrain" ? "Muted basemap" : l}
+          </button>
+        ))}
+      </div>
+      <div className="maptools">
+        <button
+          aria-label="Zoom in"
+          onClick={() => setZoom((v) => Math.min(3, v + 0.35))}
+        >
+          <Plus />
+        </button>
+        <button
+          aria-label="Zoom out"
+          onClick={() => setZoom((v) => Math.max(1, v - 0.35))}
+        >
+          <Minus />
+        </button>
+        <button
+          aria-label="Reset map view"
+          onClick={() => {
+            setZoom(1);
+            setChosen(null);
+          }}
+        >
+          <Crosshair />
+        </button>
+      </div>
+      {popup && !detail && (
+        <div className="map-popup">
+          <div className="between">
+            <span className="caseid">{popup.id}</span>
+            <button
+              aria-label="Close map detail"
+              onClick={() => setChosen(null)}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <h3 style={{ marginTop: 8 }}>{popup.area}</h3>
+          <p>
+            {cases.filter((c) => c.area === popup.area).length} cases ·{" "}
+            {popup.region}
+          </p>
+          <button className="textbtn" onClick={() => onSelect?.(popup)}>
+            View case <ArrowRight />
+          </button>
+        </div>
+      )}
+      {!cases.length && !detail && (
+        <div className="mapempty">
+          <span className="badge">No cases match these filters</span>
+        </div>
+      )}
+      {running && <div className="scanline" />}
+      <div className="mapcaption">
+        Illustrative basemap · fictional case overlays
+        <br />
+        <a
+          href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Esri, Vantor, Earthstar Geographics, GIS User Community
+        </a>
+      </div>
+    </div>
+  );
+}
+function CaseTable({
+  cases,
+  users,
+  onSelect,
+  caption = "Case register",
+}: {
+  cases: MiningCase[];
+  users: User[];
+  onSelect: (c: MiningCase) => void;
+  caption?: string;
+}) {
+  return (
+    <div className="panel casestable">
+      <div className="panelhead between">
+        <div className="flexline">
+          <h2>{caption}</h2>
+          <span className="badge">{cases.length}</span>
+        </div>
+        <span className="small muted">Latest cases first</span>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Case ID</TableHead>
+            <TableHead>Mining area</TableHead>
+            <TableHead>Assigned inspector</TableHead>
+            <TableHead>Priority</TableHead>
+            <TableHead>Case status</TableHead>
+            <TableHead>
+              <span className="sr-only">Open</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {cases.map((c) => (
+            <TableRow key={c.id} onClick={() => onSelect(c)}>
+              <TableCell>
+                <button
+                  className="caseid"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(c);
+                  }}
+                >
+                  {c.id}
+                </button>
+              </TableCell>
+              <TableCell>
+                <div className="caselocation">
+                  {c.area}
+                  <small>{c.region}</small>
+                </div>
+              </TableCell>
+              <TableCell>
+                {c.inspector ? (
+                  <div className="flexline">
+                    <span className="avatar">
+                      {initials(
+                        users.find((u) => u.id === c.inspector)?.name || "?",
+                      )}
+                    </span>
+                    {users.find((u) => u.id === c.inspector)?.name}
+                  </div>
+                ) : (
+                  <span className="muted">Unassigned</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <span
+                  className={`badge ${c.priority === "High" ? "amber" : "outline"}`}
+                >
+                  {c.priority}
+                </span>
+              </TableCell>
+              <TableCell>
+                <StatusBadge status={c.status} />
+              </TableCell>
+              <TableCell>
+                <ChevronRight size={15} color="#9babb4" />
+              </TableCell>
+            </TableRow>
+          ))}
+          {!cases.length && (
+            <TableRow>
+              <TableCell colSpan={6} className="table-empty">
+                No cases match the selected filters.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      <div className="tablefoot">
+        <span>
+          Showing {cases.length} case{cases.length !== 1 ? "s" : ""}
+        </span>
+        <span>All dates in East Africa Time</span>
+      </div>
+    </div>
+  );
+}
+function FilterBar({
+  region,
+  setRegion,
+  status,
+  setStatus,
+  start,
+  setStart,
+  end,
+  setEnd,
+  children,
+  onReset,
+}: {
+  region: string;
+  setRegion: (s: string) => void;
+  status?: string;
+  setStatus?: (s: string) => void;
+  start: string;
+  setStart: (s: string) => void;
+  end: string;
+  setEnd: (s: string) => void;
+  children?: React.ReactNode;
+  onReset?: () => void;
+}) {
+  return (
+    <div className="filterbar">
+      <label className="field">
+        <span>Location</span>
+        <Pick
+          value={region}
+          onChange={setRegion}
+          options={["All locations", ...REGIONS]}
+          label="Filter by location"
+        />
+      </label>
+      <label className="field">
+        <span>From</span>
+        <input
+          type="date"
+          value={start}
+          aria-label="Start date"
+          onChange={(e) => setStart(e.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span>To</span>
+        <input
+          type="date"
+          value={end}
+          aria-label="End date"
+          onChange={(e) => setEnd(e.target.value)}
+        />
+      </label>
+      {setStatus && (
+        <label className="field">
+          <span>Case status</span>
+          <Pick
+            value={status || "All statuses"}
+            onChange={setStatus}
+            options={["All statuses", ...STATUSES]}
+            label="Filter by case status"
+          />
+        </label>
+      )}
+      {children}
+      <button
+        className="btn ghost"
+        onClick={() => {
+          setRegion("All locations");
+          setStatus?.("All statuses");
+          setStart("2026-09-01");
+          setEnd("2026-09-30");
+          onReset?.();
+        }}
+      >
+        <RefreshCw size={14} />
+        Reset
+      </button>
+    </div>
+  );
 }
 
-function MainNav({user,page,navigate,onLogout}:{user:User;page:Page;navigate:(p:Page)=>void;onLogout:()=>void}){const {setOpenMobile}=useSidebar();const allowed=navItems(user.role);return <Sidebar><SidebarHeader className="nav-brand"><Brand/></SidebarHeader><div className="nav-context"><Globe/><div>Ethiopia workspace<small>National mining monitoring</small></div></div><SidebarContent><div className="nav-label">WORKSPACE</div><SidebarMenu className="nav-group">{allowed.filter(i=>i.id!=='users'&&i.id!=='settings').map(n=><SidebarMenuItem key={n.id}><SidebarMenuButton className="nav-btn" isActive={page===n.id} onClick={()=>{navigate(n.id);setOpenMobile(false)}}><n.icon/><span>{n.name}</span>{n.id==='mobile'&&<ArrowUpRight size={13} style={{marginLeft:'auto'}}/>}</SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>{user.role==='Administrator'&&<><div className="nav-divider"/><div className="nav-label">ADMINISTRATION</div><SidebarMenu className="nav-group">{allowed.filter(i=>i.id==='users'||i.id==='settings').map(n=><SidebarMenuItem key={n.id}><SidebarMenuButton className="nav-btn" isActive={page===n.id} onClick={()=>{navigate(n.id);setOpenMobile(false)}}><n.icon/><span>{n.name}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></>}</SidebarContent><div className="nav-footnote"><div className="flexline" style={{color:'#c3d5db',marginBottom:5}}><FlaskConical size={14}/>Pilot workspace</div>AI findings require human review and on-site verification.</div><SidebarFooter className="nav-bottom"><div className="between"><div className="flexline"><span className="avatar teal">{initials(user.name)}</span><div style={{fontSize:12,color:'#deeaee'}}>{user.name}<div className="muted" style={{fontSize:10,marginTop:2}}>{user.role}</div></div></div><button aria-label="Sign out and switch account" title="Switch account" onClick={onLogout}><LogOut size={16}/></button></div></SidebarFooter></Sidebar>}
-function navItems(role:Role):{id:Page;name:string;icon:typeof MapIcon}[]{const common:{id:Page;name:string;icon:typeof MapIcon}[]=[{id:'dashboard',name:'Overview',icon:LayoutDashboard},{id:'analysis',name:'Imagery & analysis',icon:ScanLine},{id:'cases',name:role==='Field Inspector'?'My assigned cases':'Case register',icon:FolderOpen},{id:'reports',name:'Reports',icon:FileText},{id:'mobile',name:'Field mobile app',icon:Smartphone},{id:'users',name:'Users & roles',icon:Users},{id:'settings',name:'Settings',icon:Settings}];return common.filter(n=>role==='Field Inspector'?['cases','mobile'].includes(n.id):role==='Administrator'?['dashboard','cases','reports','users','settings'].includes(n.id):role==='Dashboard Viewer'?['dashboard','cases','reports'].includes(n.id):['dashboard','analysis','cases','reports'].includes(n.id))}
-export default function Home(){
- const [users,setUsers]=useState(USERS),[userId,setUserId]=useState<string|null>(null),[page,setPage]=useState<Page>('dashboard'),[cases,setCases]=useState(INITIAL_CASES),[selected,setSelected]=useState<string|null>(null),[mobileCaseId,setMobileCaseId]=useState<string|null>(null),[threshold,setThreshold]=useState(100),[enabledModels,setEnabledModels]=useState(MODELS),[findings,setFindings]=useState<Finding[]>([]);
- const user=users.find(u=>u.id===userId)||null;const activeCase=cases.find(c=>c.id===selected);const allowedCases=user?.role==='Field Inspector'?cases.filter(c=>c.inspector===user.id):cases;
- const login=(u:User)=>{setUserId(u.id);if(page!=='mobile')setPage(u.role==='Field Inspector'?'cases':'dashboard');toast.success(`Welcome, ${u.name.split(' ')[0]}`)};
- const navigate=(p:Page)=>{if(user&&navItems(user.role).some(n=>n.id===p)){setPage(p);setSelected(null);window.scrollTo({top:0,behavior:'smooth'})}};
- const updateCase=(id:string,change:Partial<MiningCase>)=>setCases(old=>old.map(c=>c.id===id?{...c,...change}:c));
- const createCase=(f:Finding,observations:string,inspector:string)=>{if(user?.role!=='System Operator'||f.caseId)return;const id=`LAL-2026-${String(Math.max(...cases.map(c=>Number(c.id.split('-').at(-1))))+1).padStart(4,'0')}`;const now=new Date().toISOString();const history=[{event:'Case created from reviewed AI findings',at:now,by:user.name}];if(inspector)history.push({event:'Assigned to field inspector',at:now,by:user.name});const c:MiningCase={id,area:f.area.name,region:f.area.region,lat:f.area.lat,lng:f.area.lng,created:now.slice(0,10),capture:f.capture,status:inspector?'Assigned':'New',inspector,models:f.models,title:f.title,observations,priority:'High',detections:1,history,image:f.image,imageName:f.imageName};setCases(old=>[c,...old]);setFindings(old=>old.map(v=>v.id===f.id?{...v,caseId:id}:v));toast.success(`${id} created${inspector?' and assigned':''}`);setSelected(id)};
- useEffect(()=>{const context=(document as any).modelContext;if(!context?.registerTool||!user)return;const lifecycle=new AbortController();const register=(tool:any)=>{try{Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{})}catch{}};register({name:'list_lalibela_cases',description:'Read sample cases visible to the currently signed-in demo role.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute:()=>({cases:allowedCases.map(c=>({id:c.id,area:c.area,status:c.status,outcome:c.inspection?.outcome||null})),sampleData:true})});register({name:'open_lalibela_case',description:'Open a sample case detail panel without changing the case.',inputSchema:{type:'object',properties:{caseId:{type:'string'}},required:['caseId'],additionalProperties:false},annotations:{readOnlyHint:false},execute:(input:unknown)=>{const id=(input as {caseId?:string})?.caseId;if(typeof id!=='string'||!allowedCases.some(c=>c.id===id))throw new Error('Case is unavailable for this demo role');setSelected(id);return{opened:id}}});return()=>lifecycle.abort()},[user,allowedCases]);
- if(!user&&page!=='mobile')return <><Login users={users} onLogin={login} onMobile={()=>setPage('mobile')}/><Toaster theme="light"/></>;
- const mobileContent=<MobileApp initialCaseId={mobileCaseId} user={user} users={users} onLogin={login} cases={user?cases.filter(c=>c.inspector===user.id):[]} threshold={threshold} updateCase={updateCase} onExit={()=>{setPage('dashboard');setUserId(null)}}/>;
- if(!user)return <><div className="prototypebar"><strong>PROJECT LALIBELA · INTERACTIVE PROTOTYPE</strong><button className="textbtn" onClick={()=>setPage('dashboard')}>Web login <ArrowUpRight/></button></div><div className="workspace mobile-workspace">{mobileContent}</div><Toaster theme="light"/></>;
- return <SidebarProvider style={{'--sidebar-width':'237px'} as React.CSSProperties}><MainNav user={user} page={page} navigate={navigate} onLogout={()=>{setUserId(null);setSelected(null);setPage('dashboard')}}/><SidebarInset className="min-w-0"><header className="topbar"><div className="flexline"><SidebarTrigger className="mobileonly"/><div className="breadcrumb"><span>Workspace</span><ChevronRight size={13}/><strong>{navItems(user.role).find(n=>n.id===page)?.name}</strong></div></div><div className="topbar-right"><span className="hide-mobile muted">17 September 2026</span><span className="badge outline">{user.role==='Dashboard Viewer'?<><Eye size={12}/>Read-only access</>:user.role}</span><span className="avatar">{initials(user.name)}</span></div></header><div className="prototypebar"><span><strong>INTERACTIVE PROTOTYPE</strong> &nbsp; Sample data · simulated AI · session only</span><button onClick={()=>{setUserId(null);setSelected(null);setPage('dashboard')}} className="textbtn" style={{fontSize:12}}>Switch account <LogOut size={12}/></button></div><div className={`workspace animate-enter ${page==='mobile'?'mobile-workspace':''}`} key={page}>
- {page==='dashboard'&&<Dashboard cases={cases} users={users} onSelect={c=>setSelected(c.id)} onAnalyze={user.role==='System Operator'?()=>navigate('analysis'):undefined} onReports={()=>navigate('reports')} pending={findings.filter(f=>!f.caseId)}/>}
- {page==='analysis'&&user.role==='System Operator'&&<Analysis enabledModels={enabledModels} findings={findings} setFindings={setFindings} inspectors={users.filter(u=>u.role==='Field Inspector'&&u.active)} createCase={createCase}/>}
- {page==='cases'&&<CasesView cases={allowedCases} user={user} users={users} onSelect={c=>setSelected(c.id)} onMobile={()=>navigate('mobile')}/>}
- {page==='reports'&&user.role!=='Field Inspector'&&<Reports cases={cases} pending={findings.filter(f=>!f.caseId)} users={users} onSelect={c=>setSelected(c.id)}/>}
- {page==='users'&&user.role==='Administrator'&&<UserManagement users={users} setUsers={setUsers} current={user.id}/>}
- {page==='settings'&&user.role==='Administrator'&&<SettingsView threshold={threshold} setThreshold={setThreshold} enabledModels={enabledModels} setEnabledModels={setEnabledModels} onUsers={()=>navigate('users')}/>}
- {page==='mobile'&&user.role==='Field Inspector'&&mobileContent}
- </div></SidebarInset><CaseDetail c={activeCase&&allowedCases.some(c=>c.id===activeCase.id)?activeCase:undefined} user={user} users={users} onClose={()=>setSelected(null)} updateCase={updateCase} onMobile={()=>{setMobileCaseId(selected);navigate('mobile')}}/><Toaster theme="light"/></SidebarProvider>
+function Login({
+  users,
+  onLogin,
+  onMobile,
+}: {
+  users: User[];
+  onLogin: (u: User) => void;
+  onMobile: () => void;
+}) {
+  const [kind, setKind] = useState("user"),
+    [uid, setUid] = useState("u2"),
+    [email, setEmail] = useState("operator@lalibela.demo"),
+    [password, setPassword] = useState("Lalibela2026!"),
+    [error, setError] = useState("");
+  const options = users.filter((u) =>
+    kind === "admin" ? u.role === "Administrator" : u.role !== "Administrator",
+  );
+  const choose = (id: string) => {
+    setUid(id);
+    setEmail(users.find((u) => u.id === id)?.email || "");
+    setError("");
+  };
+  return (
+    <div className="login">
+      <div className="login-visual">
+        <div className="login-map">
+          <img
+            src="/ethiopia-satellite.jpg"
+            alt="Satellite basemap of Ethiopia"
+          />
+          <div className="mapgrid" />
+        </div>
+        <div className="login-overlay" />
+        <Brand />
+        <div className="login-caption">
+          <div className="eyebrow">PROJECT LALIBELA · ETHIOPIA</div>
+          <h2>
+            Satellite insight.
+            <br />
+            Field-verified action.
+          </h2>
+          <p>
+            One workspace to monitor mining areas, investigate suspected
+            violations, and record what happens on the ground.
+          </p>
+        </div>
+        <div className="login-footer">
+          <span>ILLUSTRATIVE BASEMAP</span>
+          <a
+            href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Esri and imagery contributors ↗
+          </a>
+        </div>
+      </div>
+      <div className="login-form-wrap">
+        <div className="login-form">
+          <span className="demo-label">
+            <FlaskConical />
+            INTERACTIVE PROTOTYPE
+          </span>
+          <h1>Welcome to Lalibela</h1>
+          <p className="muted">
+            Sign in to your mining intelligence workspace.
+          </p>
+          <Tabs
+            value={kind}
+            onValueChange={(v) => {
+              setKind(v);
+              choose(v === "admin" ? "u1" : "u2");
+            }}
+          >
+            <TabsList className="w-full h-11">
+              <TabsTrigger value="user" className="flex-1">
+                <UserRound size={15} />
+                User Login
+              </TabsTrigger>
+              <TabsTrigger value="admin" className="flex-1">
+                <ShieldCheck size={15} />
+                Admin Login
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const u = users.find(
+                (u) =>
+                  u.email.toLowerCase() === email.toLowerCase() &&
+                  options.some((o) => o.id === u.id),
+              );
+              if (!u || password !== "Lalibela2026!")
+                return setError(
+                  "Use the prefilled sample credentials. Demo password: Lalibela2026!",
+                );
+              if (!u.active)
+                return setError(
+                  "This user is deactivated. Select an active demo account.",
+                );
+              onLogin(u);
+            }}
+          >
+            <label className="field">
+              <span>Sample account</span>
+              <Pick
+                value={uid}
+                onChange={choose}
+                options={options.map((u) => ({
+                  value: u.id,
+                  label: `${u.name} · ${u.role}`,
+                }))}
+                label="Sample account"
+              />
+            </label>
+            <label className="field">
+              <span>Email address</span>
+              <input
+                type="email"
+                value={email}
+                autoComplete="off"
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                autoComplete="off"
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </label>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <Btn primary type="submit">
+              Sign in to workspace <ArrowRight />
+            </Btn>
+          </form>
+          <p
+            className="subtext"
+            style={{ fontSize: 12, textAlign: "center", marginTop: 12 }}
+          >
+            Demo credentials are prefilled. Use sample accounts only.
+          </p>
+          <div className="login-divider" />
+          <div className="between">
+            <div>
+              <h3 style={{ fontSize: 14 }}>Working in the field?</h3>
+              <p className="subtext" style={{ fontSize: 12 }}>
+                Explore the inspector mobile app.
+              </p>
+            </div>
+            <button className="textbtn" onClick={onMobile}>
+              <Smartphone />
+              Open app <ArrowUpRight />
+            </button>
+          </div>
+        </div>
+        <p className="login-form-footer">
+          Sample data and simulated AI results. Changes last for this session.
+          No real accounts or investigations are created.
+        </p>
+      </div>
+    </div>
+  );
 }
-function Dashboard({cases,users,onSelect,onAnalyze,onReports,pending}:{cases:MiningCase[];users:User[];onSelect:(c:MiningCase)=>void;onAnalyze?:()=>void;onReports:()=>void;pending:Finding[]}){const [region,setRegion]=useState('All locations'),[status,setStatus]=useState('All statuses'),[start,setStart]=useState('2026-09-01'),[end,setEnd]=useState('2026-09-30');const filtered=cases.filter(c=>(region==='All locations'||c.region===region)&&(status==='All statuses'||c.status===status)&&(!start||c.created>=start)&&(!end||c.created<=end));return <><PageHead title="Monitoring overview" subtitle="A clear view of mining activity and ongoing investigations."><Btn onClick={onReports}><Download/>View reports</Btn>{onAnalyze&&<Btn primary onClick={onAnalyze}><Plus/>New analysis</Btn>}</PageHead><Stats cases={filtered} extra={status==='All statuses'?pending.filter(f=>(region==='All locations'||f.area.region===region)&&(!start||f.created>=start)&&(!end||f.created<=end)).length:0}/><FilterBar {...{region,setRegion,status,setStatus,start,setStart,end,setEnd}}/>{start>end&&<Note amber>The start date must be before the end date.</Note>}<div className="twocol"><div className="panel map-panel"><div className="panelhead between"><div className="flexline"><h2>Mining activity map</h2><span className="badge outline">Ethiopia</span></div><span className="small muted hide-mobile">{new Set(filtered.map(c=>c.area)).size} monitored areas</span></div><MiningMap cases={filtered} onSelect={onSelect}/><div className="maplegend"><span><i className="legend-dot"/>Active investigation</span><span><i className="legend-dot" style={{background:'#3e8c78'}}/>Closed</span><span style={{marginLeft:'auto'}}>Select a site to explore</span></div></div><div className="panel overview-side"><div className="panelhead"><h2>Investigation pipeline</h2></div><div className="panelbody"><div className="between" style={{marginBottom:18}}><div><div className="statvalue" style={{fontSize:30}}>{filtered.filter(c=>c.status!=='Closed').length}</div><span className="small muted">Active investigations</span></div><Activity size={32} color="#a2c3b9"/></div>{STATUSES.map((s,i)=><React.Fragment key={s}><div className="statusline"><span><i className="legend-dot" style={{background:STATUS_COLORS[i],marginRight:0}}/>{s}</span><strong>{filtered.filter(c=>c.status===s).length}</strong></div><div className="tinybar"><span style={{width:`${filtered.length?filtered.filter(c=>c.status===s).length/filtered.length*100:0}%`,background:STATUS_COLORS[i]}}/></div></React.Fragment>)}<div style={{marginTop:20}}><Note>AI findings are suspected violations until verified through inspection.</Note></div></div></div></div><CaseTable cases={filtered} users={users} onSelect={onSelect} caption="Cases at a glance"/></>}
-function CasesView({cases,users,user,onSelect,onMobile}:{cases:MiningCase[];users:User[];user:User;onSelect:(c:MiningCase)=>void;onMobile:()=>void}){const[view,setView]=useState('list'),[search,setSearch]=useState(''),[status,setStatus]=useState('All statuses');const filtered=cases.filter(c=>(c.id+' '+c.area+' '+c.title).toLowerCase().includes(search.toLowerCase())&&(status==='All statuses'||c.status===status));return <><PageHead title={user.role==='Field Inspector'?'My assigned cases':'Case register'} subtitle={user.role==='Field Inspector'?'All of your assignments, wherever you are. Verify your location to submit an on-site update.':'Review evidence, inspection history, and progress for every investigation.'}>{user.role==='Field Inspector'&&<Btn primary onClick={onMobile}><Smartphone/>Open field app</Btn>}</PageHead><div className="between wrap" style={{marginBottom:21}}><div className="flexline wrap"><div className="flexline" style={{background:'white',border:'1px solid var(--border)',borderRadius:6,padding:'0 12px'}}><Search size={16} color="#82959e"/><input aria-label="Search cases" className="input" style={{border:0,minWidth:210}} placeholder="Search Case ID or mining area…" value={search} onChange={e=>setSearch(e.target.value)}/></div><Pick value={status} onChange={setStatus} options={['All statuses',...STATUSES]} label="Case status"/></div><Tabs value={view} onValueChange={setView}><TabsList><TabsTrigger value="list"><List size={15}/>List</TabsTrigger><TabsTrigger value="map"><MapIcon size={15}/>Map</TabsTrigger></TabsList></Tabs></div>{view==='map'?<div className="panel"><MiningMap cases={filtered} onSelect={onSelect}/><div className="maplegend">{filtered.length} assigned or registered cases · select a site to open case details</div></div>:user.role==='Field Inspector'?<div className="inspectioncards">{filtered.map(c=><button className="panel inspectioncard" style={{textAlign:'left'}} key={c.id} onClick={()=>onSelect(c)}><div className="between"><span className="caseid">{c.id}</span><StatusBadge status={c.status}/></div><h2>{c.area}</h2><p><MapPin size={13} style={{display:'inline',marginRight:4}}/>{c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}</p><div className="small" style={{marginBottom:16,lineHeight:1.7}}>{c.title}</div><div className="between"><span className="badge amber">Suspected violation</span><ChevronRight size={17}/></div></button>)}{!filtered.length&&<Empty><EmptyHeader><EmptyTitle>No assigned cases match</EmptyTitle><EmptyDescription>Change your search or status filter.</EmptyDescription></EmptyHeader></Empty>}</div>:<CaseTable cases={filtered} users={users} onSelect={onSelect}/>}</>}
-function CaseDetail({c,user,users,onClose,updateCase,onMobile}:{c?:MiningCase;user:User;users:User[];onClose:()=>void;updateCase:(id:string,v:Partial<MiningCase>)=>void;onMobile:()=>void}){const [assignee,setAssignee]=useState('none');useEffect(()=>setAssignee(c?.inspector||'none'),[c]);return <Sheet open={!!c} onOpenChange={v=>{if(!v)onClose()}}><SheetContent className="case-sheet">{c&&<><SheetHeader style={{padding:0}}><SheetDescription className="caseid">{c.id}</SheetDescription><SheetTitle>{c.area}</SheetTitle></SheetHeader><div className="flexline wrap" style={{marginTop:15}}><StatusBadge status={c.status}/><span className="badge amber">AI suspected violation</span><span className="badge outline">{c.priority} priority</span></div><Flow status={c.status}/><MiningMap cases={[c]} detail image={c.image} polygons/><p className="subtext" style={{fontSize:11}}>Illustrative Shakiso imagery unless uploaded · capture dates below are sample metadata.</p><div className="info-grid"><div className="info-item"><span>Assigned inspector</span><p>{users.find(u=>u.id===c.inspector)?.name||'Unassigned'}</p></div><div className="info-item"><span>Location</span><p>{c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}</p></div><div className="info-item"><span>Capture date (sample)</span><p>{c.capture}</p></div><div className="info-item"><span>AI models</span><p>{c.models.join(' · ')}</p></div></div><h3>{c.title}</h3><p className="subtext" style={{lineHeight:1.8}}>{c.observations}</p><div className="sectiontitle">Inspection outcome</div>{c.inspection?<><span className={`badge ${c.inspection.outcome===OUTCOMES[0]?'red':c.inspection.outcome===OUTCOMES[1]?'green':'amber'}`}>{c.inspection.outcome}</span><p className="subtext" style={{marginTop:10,lineHeight:1.8}}>{c.inspection.observations}</p><div className="info-grid"><div className="info-item"><span>Submitted at</span><p>{displayTime(c.inspection.at)}</p></div><div className="info-item"><span>GPS evidence</span><p>{c.inspection.lat.toFixed(5)}, {c.inspection.lng.toFixed(5)}</p><small className="muted">{c.inspection.source} · ±{Math.round(c.inspection.accuracy)} m</small></div></div>{c.inspection.photos.length>0&&<div className="photogrid">{c.inspection.photos.map((p,i)=><a href={p} key={i} target="_blank" rel="noreferrer"><img src={p} alt={`Inspection photo ${i+1}`}/></a>)}</div>}</>:<Note>No outcome recorded. The suspected violation is awaiting field verification.</Note>}<div className="sectiontitle">Inspection & case history</div><div className="timeline">{c.history.map((h,i)=><div className="timeline-item" key={i}>{h.event}<p>{displayTime(h.at)} · {h.by}</p></div>)}</div>{user.role==='System Operator'&&['New','Assigned'].includes(c.status)&&<div className="panelbody panel"><label className="field"><span>{c.inspector?'Reassign inspector':'Assign field inspector'}</span><Pick value={assignee} onChange={setAssignee} options={[{value:'none',label:'Select an inspector'},...users.filter(u=>u.role==='Field Inspector'&&u.active).map(u=>({value:u.id,label:u.name}))]} label="Assign inspector"/></label><Btn primary className="full" style={{marginTop:14}} disabled={assignee==='none'||assignee===c.inspector} onClick={()=>{if(assignee==='none')return;updateCase(c.id,{inspector:assignee,status:'Assigned',history:[...c.history,{event:'Assigned to '+users.find(u=>u.id===assignee)?.name,at:new Date().toISOString(),by:user.name}]});toast.success('Inspector assigned')}}>Save assignment <ArrowRight/></Btn></div>}{user.role==='System Operator'&&c.status==='Inspection Submitted'&&<Btn primary className="full" onClick={()=>{updateCase(c.id,{status:'Closed',history:[...c.history,{event:'Case closed after review',at:new Date().toISOString(),by:user.name}]});toast.success('Case closed. Inspection outcome retained.')}}><CheckCircle2/>Close case after review</Btn>}{user.role==='Field Inspector'&&['Assigned','Under Inspection'].includes(c.status)&&<Btn primary className="full" onClick={()=>{onClose();onMobile()}}><Smartphone/>Continue in field app</Btn>}</>}</SheetContent></Sheet>}
-function Analysis({enabledModels,findings,setFindings,inspectors,createCase}:{enabledModels:string[];findings:Finding[];setFindings:React.Dispatch<React.SetStateAction<Finding[]>>;inspectors:User[];createCase:(f:Finding,observations:string,inspector:string)=>void}){
- const[area,setArea]=useState(AREAS[0].name),[capture,setCapture]=useState('2026-09-16'),[models,setModels]=useState(enabledModels),[fileName,setFileName]=useState('Shakiso_Survey-A_sample.jpg'),[preview,setPreview]=useState<string>(),[progress,setProgress]=useState(0),[running,setRunning]=useState(false),[resultSet,setResultSet]=useState<string[]>(findings.slice(0,3).map(f=>f.id)),[newCase,setNewCase]=useState<Finding|null>(null),[observation,setObservation]=useState(''),[assignee,setAssignee]=useState('none'),[imageError,setImageError]=useState('');const upload=useRef<HTMLInputElement>(null),timer=useRef<ReturnType<typeof setInterval>|null>(null);
- useEffect(()=>()=>{if(timer.current)clearInterval(timer.current)},[]);
- const current=findings.filter(f=>resultSet.includes(f.id));
- const acceptImage=(file:File|undefined)=>{if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setImageError('For this prototype, upload a JPEG, PNG or WebP preview. GeoTIFF ingestion is represented by the sample imagery flow.');return}if(file.size>20*1024*1024){setImageError('Choose a preview image smaller than 20 MB.');return}setImageError('');setFileName(file.name);setPreview(URL.createObjectURL(file));setResultSet([]);setProgress(0)};
- const run=()=>{if(!models.length||!capture||!fileName||running)return;setProgress(0);setRunning(true);setResultSet([]);let p=0;timer.current=setInterval(()=>{p+=10;setProgress(p);if(p>=100){clearInterval(timer.current!);timer.current=null;const a=AREAS.find(a=>a.name===area)!;const stamp=Date.now();const batch:Finding[]=[{title:'Possible excavation footprint',description:'Irregular exposed ground and pit-like features are visible in the highlighted zone. Check activity and permit boundaries on site.',confidence:94},{title:'Vegetation clearance near access track',description:'A connected bare-ground pattern may indicate a new access route. Agricultural or construction activity is also possible.',confidence:87},{title:'Possible sediment or tailings deposit',description:'A contrasting surface texture may indicate disturbed material. Field evidence is needed to establish the cause.',confidence:78}].map((f,i)=>({...f,id:`F-${stamp}-${i}`,created:new Date(stamp).toISOString().slice(0,10),reviewed:false,area:a,capture,models:[...models],image:preview,imageName:fileName}));setFindings(old=>[...batch,...old]);setResultSet(batch.map(f=>f.id));setRunning(false);toast.success('Simulated analysis complete. 3 suspected findings ready for review.')}},320)};
- return <><PageHead title="Imagery & analysis" subtitle="Turn satellite imagery into reviewable findings and field assignments."><span className="demo-label"><FlaskConical/>SIMULATED AI ANALYSIS</span></PageHead><div className="analysis-layout"><div className="stack"><section className="panel"><div className="panelhead flexline"><Upload size={18} color="#3b8073"/><h2>1. Prepare imagery</h2></div><div className="panelbody"><input ref={upload} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e=>acceptImage(e.target.files?.[0])}/><div className="uploadzone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!running)acceptImage(e.dataTransfer.files[0])}}><Upload/><p>Drop satellite imagery here</p><small>JPEG, PNG or WebP · up to 20 MB</small><Btn disabled={running} onClick={()=>upload.current?.click()}>Browse files</Btn></div>{imageError&&<p className="error" style={{marginTop:10}}>{imageError}</p>}<div className="filechip"><FileImage/><div className="grow" style={{minWidth:0}}><div style={{wordBreak:'break-all'}}>{fileName}</div><small className="muted">{preview?'Local preview · session only':'Illustrative sample imagery'}</small></div><CheckCircle2 size={17}/></div><div className="stack" style={{marginTop:20,gap:15}}><label className="field"><span>Mining area / location</span><Pick value={area} onChange={setArea} options={AREAS.map(a=>a.name)} label="Imagery location"/></label><label className="field"><span>Capture date {preview?'':'(sample metadata)'}</span><input type="date" required value={capture} max="2026-09-17" onChange={e=>setCapture(e.target.value)}/></label><div className="small muted"><MapPin size={13} style={{display:'inline'}}/> {AREAS.find(a=>a.name===area)?.lat.toFixed(4)}° N, {AREAS.find(a=>a.name===area)?.lng.toFixed(4)}° E</div></div></div></section><section className="panel"><div className="panelhead flexline"><ScanLine size={18} color="#3b8073"/><h2>2. Select AI models</h2></div><div className="panelbody"><p className="subtext" style={{marginTop:0}}>Compare one or more models on the same imagery.</p><div className="modelchoices">{MODELS.map(m=><label className={`modelcard ${models.includes(m)?'checked':''}`} key={m}><Checkbox disabled={!enabledModels.includes(m)||running} checked={models.includes(m)} onCheckedChange={v=>setModels(old=>v?[...old,m]:old.filter(x=>x!==m))} aria-label={`Use ${m}`}/>{m}</label>)}</div>{!enabledModels.length&&<p className="error">An administrator must enable at least one model in Settings.</p>}<Btn primary className="full" disabled={running||!models.length||!capture||capture>'2026-09-17'} onClick={run}>{running?<Loader2 className="animate-spin"/>:<ScanLine/>}{running?'Analyzing imagery…':'Run simulated analysis'}</Btn>{running&&<div className="progressbox"><div className="between small muted" style={{marginBottom:8}}><span>{progress<30?'Preparing imagery':progress<80?'Comparing model findings':'Compiling results'}</span><span>{progress}%</span></div><Progress value={progress}/></div>}<p className="subtext" style={{fontSize:12,lineHeight:1.7,marginTop:13}}>This demo returns fixed sample findings. Images are not sent to Qwen, Gemini, or Claude.</p></div></section></div><div className="stack"><section className="panel"><div className="panelhead between"><div><h2>Imagery review</h2><p className="subtext">{current[0]?.area.name||area}</p></div><span className="badge outline"><Satellite size={12}/>Satellite</span></div><MiningMap cases={[]} detail image={current[0]?.image||preview} polygons={!!current.length} running={running}/><div className="maplegend"><span><i className="legend-dot"/>Suspected activity</span><span>Shakiso sample basemap · fictional overlays</span></div></section><section className="panel"><div className="panelhead between"><h2>3. Review findings</h2><span className="badge">{current.length} findings</span></div><div className="panelbody">{!current.length?<Empty><EmptyHeader><EmptyTitle>{running?'Analysis in progress':'Ready when you are'}</EmptyTitle><EmptyDescription>{running?'Reviewable findings will appear here shortly.':'Choose models and run an analysis to identify areas for review.'}</EmptyDescription></EmptyHeader></Empty>:<><Note amber>AI identifies suspected violations. Model scores indicate simulated visual confidence, not proof of illegal activity.</Note>{current.map((f,i)=><div className={`finding ${f.reviewed?'active':''}`} key={f.id}><div className="between"><div className="flexline"><span className="badge amber">{i+1}</span><h3>{f.title}</h3></div><span className="badge outline">{f.confidence}%</span></div><p>{f.description}</p><div className="flexline wrap">{f.models.map((m,j)=><span className="badge" key={m}>{m} · {f.confidence-j*2}%</span>)}<span className="badge amber">Suspected violation</span></div><div className="finding-footer between"><label className="flexline small" style={{cursor:'pointer'}}><Checkbox checked={f.reviewed} disabled={!!f.caseId} onCheckedChange={v=>setFindings(old=>old.map(x=>x.id===f.id?{...x,reviewed:!!v}:x))} aria-label={`Mark finding ${i+1} reviewed`}/>Reviewed by operator</label>{f.caseId?<span className="caseid">{f.caseId}</span>:<Btn primary disabled={!f.reviewed} onClick={()=>{setNewCase(f);setObservation(f.description);setAssignee('none')}}><Plus/>Create case</Btn>}</div></div>)}</>}</div></section></div></div><Dialog open={!!newCase} onOpenChange={v=>{if(!v)setNewCase(null)}}><DialogContent style={{background:'#fff'}}><DialogHeader><DialogTitle>Create investigation case</DialogTitle><DialogDescription>The reviewed finding and imagery will be linked to a unique Case ID.</DialogDescription></DialogHeader><div className="badge amber">AI suspected violation</div><h3>{newCase?.title}</h3><form className="stack" onSubmit={e=>{e.preventDefault();if(!newCase||!observation.trim())return;createCase(newCase,observation.trim(),assignee==='none'?'':assignee);setNewCase(null)}}><label className="field"><span>Operator observations</span><textarea value={observation} onChange={e=>setObservation(e.target.value)} required/></label><label className="field"><span>Field inspector</span><Pick value={assignee} onChange={setAssignee} options={[{value:'none',label:'Leave unassigned — New case'},...inspectors.map(u=>({value:u.id,label:u.name}))]} label="Assign new case to inspector"/></label><div className="filechip"><FileImage/><div>{newCase?.imageName}<small className="muted" style={{display:'block'}}>Imagery, capture date, models and finding attached</small></div></div><Btn primary type="submit">{assignee==='none'?'Create new case':'Create & assign case'}<ArrowRight/></Btn></form></DialogContent></Dialog></>}
-function Reports({cases,pending,users,onSelect}:{cases:MiningCase[];pending:Finding[];users:User[];onSelect:(c:MiningCase)=>void}){const[region,setRegion]=useState('All locations'),[start,setStart]=useState('2026-09-01'),[end,setEnd]=useState('2026-09-30'),[inspector,setInspector]=useState('All inspectors'),[model,setModel]=useState('All models'),[busy,setBusy]=useState(false);const filtered=cases.filter(c=>(region==='All locations'||c.region===region)&&(!start||c.created>=start)&&(!end||c.created<=end)&&(inspector==='All inspectors'||c.inspector===inspector)&&(model==='All models'||c.models.includes(model)));const inspected=filtered.filter(c=>c.inspection);const unlinked=pending.filter(f=>inspector==='All inspectors'&&(region==='All locations'||f.area.region===region)&&(!start||f.created>=start)&&(!end||f.created<=end)&&(model==='All models'||f.models.includes(model)));const totalFindings=filtered.reduce((s,c)=>s+c.detections,0)+unlinked.length;const reportRows=()=>filtered.map(c=>({'Case ID':c.id,'Mining area':c.area,Location:c.region,Created:c.created,'AI suspected findings':c.detections,'Assigned inspector':users.find(u=>u.id===c.inspector)?.name||'Unassigned',Status:c.status,'Inspection outcome':c.inspection?.outcome||'Not inspected','AI models':c.models.join(', '),'Submitted at':c.inspection?displayTime(c.inspection.at):'','GPS coordinates':c.inspection?`${c.inspection.lat}, ${c.inspection.lng}`:'','GPS source':c.inspection?.source||''}));
- const exportReport=async(kind:'pdf'|'excel')=>{setBusy(true);try{if(kind==='excel'){const XLSX=await import('xlsx');const wb=XLSX.utils.book_new();const summary=[['Project Lalibela — SAMPLE DATA'],['Filters',`${start} to ${end}; ${region}; ${inspector==='All inspectors'?inspector:users.find(u=>u.id===inspector)?.name}; ${model}`],['Date basis','Case creation date'],['AI suspected findings',totalFindings],['Findings awaiting a case',unlinked.length],['Cases created',filtered.length],['Mining areas inspected',new Set(inspected.map(c=>c.area)).size],[],['Case status','Count'],...STATUSES.map(s=>[s,filtered.filter(c=>c.status===s).length]),[],['Inspection outcome','Count'],...OUTCOMES.map(s=>[s,inspected.filter(c=>c.inspection?.outcome===s).length])];XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'Summary');const ws=XLSX.utils.json_to_sheet(reportRows());ws['!cols']=Array(12).fill({wch:27});XLSX.utils.book_append_sheet(wb,ws,'Cases');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(unlinked.map(f=>({Finding:f.title,Location:f.area.name,Created:f.created,Models:f.models.join(', '),Status:'Suspected violation - awaiting case'}))),'Unlinked findings');XLSX.writeFile(wb,'Lalibela_Mining_Report_SAMPLE.xlsx')}else{const {jsPDF}=await import('jspdf');const pdf=new jsPDF();let y=23;pdf.setFillColor(18,39,51);pdf.rect(0,0,210,42,'F');pdf.setTextColor(255,255,255);pdf.setFontSize(22);pdf.text('PROJECT LALIBELA',16,y);pdf.setFontSize(10);pdf.text('MINING MONITORING REPORT | SAMPLE DATA',16,y+10);pdf.setTextColor(40,60,70);y=54;pdf.setFontSize(10);pdf.text(`${start} to ${end} | ${region} | ${model}`,16,y);y+=7;pdf.text(`Inspector: ${inspector==='All inspectors'?inspector:users.find(u=>u.id===inspector)?.name} | Date basis: case creation`,16,y);y+=12;pdf.setFontSize(12);pdf.text(`${filtered.length} cases | ${totalFindings} AI suspected findings (${unlinked.length} awaiting case)`,16,y);y+=9;pdf.text(`${new Set(inspected.map(c=>c.area)).size} mining areas inspected | ${inspected.length} inspections submitted`,16,y);y+=14;pdf.setFontSize(10);for(const s of STATUSES){pdf.text(`${s}: ${filtered.filter(c=>c.status===s).length}`,16,y);y+=7}y+=7;for(const s of OUTCOMES){pdf.text(`${s.replace(' — ',' - ')}: ${inspected.filter(c=>c.inspection?.outcome===s).length}`,16,y);y+=7}y+=14;for(const c of filtered){if(y>244){pdf.addPage();y=22}pdf.setFont('helvetica','bold');pdf.text(`${c.id} | ${c.area.replace(' · ',' / ')}`,16,y);y+=7;pdf.setFont('helvetica','normal');pdf.text(`${c.status} | ${users.find(u=>u.id===c.inspector)?.name||'Unassigned'} | ${c.models.join(', ')}`,16,y);y+=7;pdf.text(`Outcome: ${(c.inspection?.outcome||'Not inspected').replace(' — ',' - ')}`,16,y);y+=12}const count=pdf.getNumberOfPages();for(let p=1;p<=count;p++){pdf.setPage(p);pdf.setFontSize(8);pdf.setTextColor(110,125,130);pdf.text('Fictional investigations. AI findings are suspected violations until verified.',16,282);pdf.text(`${p} / ${count}`,183,282)}pdf.save('Lalibela_Mining_Report_SAMPLE.pdf')}toast.success(`${kind==='pdf'?'PDF':'Excel'} report exported`)}catch{toast.error('The report could not be exported. Please try again.')}finally{setBusy(false)}};
- return <><PageHead title="Reports & outcomes" subtitle="Understand the investigation pipeline and what field inspections found."><Btn disabled={busy} onClick={()=>exportReport('pdf')}><FileText/>Export PDF</Btn><Btn primary disabled={busy} onClick={()=>exportReport('excel')}><Download/>Export Excel</Btn></PageHead><FilterBar {...{region,setRegion,start,setStart,end,setEnd}} onReset={()=>{setInspector('All inspectors');setModel('All models')}}><label className="field"><span>Inspector</span><Pick value={inspector} onChange={setInspector} options={['All inspectors',...users.filter(u=>u.role==='Field Inspector').map(u=>({value:u.id,label:u.name}))]} label="Filter inspector"/></label><label className="field"><span>AI model</span><Pick value={model} onChange={setModel} options={['All models',...MODELS]} label="Filter AI model"/></label></FilterBar><p className="small muted" style={{margin:'-7px 0 20px'}}>Date range applies to case creation and analysis dates. All summaries and exports reflect the current filters.</p><Stats cases={filtered} extra={unlinked.length}/><div className="reportgrid"><section className="panel"><div className="panelhead"><h2>Cases by status</h2></div><div className="panelbody">{STATUSES.map((s,i)=><div className="outcome-row" key={s}><span>{s}</span><div className="tinybar"><span style={{background:STATUS_COLORS[i],width:`${filtered.length?filtered.filter(c=>c.status===s).length/filtered.length*100:0}%`}}/></div><strong>{filtered.filter(c=>c.status===s).length}</strong></div>)}</div></section><section className="panel"><div className="panelhead"><h2>Inspection outcomes</h2></div><div className="panelbody"><div className="between" style={{marginBottom:14}}><div><div className="statvalue" style={{fontSize:30}}>{new Set(inspected.map(c=>c.area)).size}</div><span className="small muted">Mining areas inspected</span></div><ShieldCheck size={36} color="#8cb4a5"/></div>{OUTCOMES.map((s,i)=><div className="outcome-row" key={s}><span style={{fontSize:13}}>{s}</span><div className="tinybar"><span style={{background:['#b7776c','#57917b','#d1ab64'][i],width:`${inspected.length?inspected.filter(c=>c.inspection?.outcome===s).length/inspected.length*100:0}%`}}/></div><strong>{inspected.filter(c=>c.inspection?.outcome===s).length}</strong></div>)}<p className="subtext" style={{fontSize:12,marginTop:12}}>Outcome describes the finding. Status describes the case workflow.</p></div></section></div><CaseTable cases={filtered} users={users} onSelect={onSelect} caption="Report case details"/></>}
 
-function UserManagement({users,setUsers,current}:{users:User[];setUsers:React.Dispatch<React.SetStateAction<User[]>>;current:string}){const[editor,setEditor]=useState<User|null>(null),[open,setOpen]=useState(false),[error,setError]=useState(''),[search,setSearch]=useState('');const filtered=users.filter(u=>(u.name+u.email+u.role).toLowerCase().includes(search.toLowerCase()));const begin=(u?:User)=>{setEditor(u?{...u}:{id:'',name:'',email:'',role:'Dashboard Viewer',active:true});setError('');setOpen(true)};const save=()=>{if(!editor)return;const clean={...editor,name:editor.name.trim(),email:editor.email.trim().toLowerCase()};if(!clean.name||!clean.email)return setError('Enter a name and email address.');if(users.some(u=>u.email.toLowerCase()===clean.email&&u.id!==clean.id))return setError('A user with this email already exists.');if(clean.id===current&&(!clean.active||clean.role!=='Administrator'))return setError('Keep your current administrator account active with its administrator role.');setUsers(old=>clean.id?old.map(u=>u.id===clean.id?clean:u):[...old,{...clean,id:`u-${Date.now()}`}]);setOpen(false);toast.success(clean.id?'User updated':'User created. Demo password: Lalibela2026!')};return <><PageHead title="Users & roles" subtitle="Manage who can view, investigate, and administer Project Lalibela."><Btn primary onClick={()=>begin()}><Plus/>Create user</Btn></PageHead><div className="statgrid">{ROLES.map(r=><div className="panel stat" key={r}><span className="muted" style={{fontSize:13}}>{r}</span><div className="statvalue" style={{fontSize:29}}>{users.filter(u=>u.role===r&&u.active).length}</div><span className="statfoot">Active users</span></div>)}</div><input className="input" aria-label="Search users" style={{maxWidth:340,marginBottom:20}} placeholder="Search by name, email, or role…" value={search} onChange={e=>setSearch(e.target.value)}/><div className="panel casestable" style={{marginTop:0}}><Table><TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead>Access</TableHead><TableHead>Manage</TableHead></TableRow></TableHeader><TableBody>{filtered.map(u=><TableRow key={u.id} style={{cursor:'default'}}><TableCell><div className="flexline"><span className="avatar">{initials(u.name)}</span><div>{u.name}<small className="muted" style={{display:'block'}}>{u.email}</small></div></div></TableCell><TableCell>{u.role}</TableCell><TableCell><label className="flexline"><Switch checked={u.active} disabled={u.id===current} aria-label={`${u.active?'Deactivate':'Activate'} ${u.name}`} onCheckedChange={v=>{setUsers(old=>old.map(x=>x.id===u.id?{...x,active:v}:x));toast.success(`${u.name} ${v?'activated':'deactivated'}`)}}/><span className={`badge ${u.active?'green':''}`}>{u.active?'Active':'Inactive'}</span></label></TableCell><TableCell><button className="textbtn" onClick={()=>begin(u)}>Edit user <ChevronRight/></button></TableCell></TableRow>)}{!filtered.length&&<TableRow><TableCell colSpan={4} className="table-empty">No users match your search.</TableCell></TableRow>}</TableBody></Table></div><div style={{marginTop:24}}><Note>Role permissions are demonstrated within this prototype. Account changes and case updates last for this session only.</Note></div><Dialog open={open} onOpenChange={setOpen}><DialogContent style={{background:'#fff'}}><DialogHeader><DialogTitle>{editor?.id?'Edit user':'Create user'}</DialogTitle><DialogDescription>Set the person’s access to the mining monitoring workspace.</DialogDescription></DialogHeader>{editor&&<form className="stack" onSubmit={e=>{e.preventDefault();save()}}><label className="field"><span>Full name</span><input required value={editor.name} onChange={e=>setEditor({...editor,name:e.target.value})}/></label><label className="field"><span>Email address</span><input required type="email" value={editor.email} onChange={e=>setEditor({...editor,email:e.target.value})}/></label><label className="field"><span>Role</span><Pick value={editor.role} onChange={v=>setEditor({...editor,role:v as Role})} options={ROLES} label="User role"/></label><label className="flexline small"><Switch checked={editor.active} onCheckedChange={v=>setEditor({...editor,active:v})}/>Active user</label>{error&&<p className="error" role="alert">{error}</p>}<p className="small muted">Demo password for all sample accounts: Lalibela2026!</p><Btn primary type="submit">{editor.id?'Save changes':'Create user'}<Check/></Btn></form>}</DialogContent></Dialog></>}
-function SettingsView({threshold,setThreshold,enabledModels,setEnabledModels,onUsers}:{threshold:number;setThreshold:(n:number)=>void;enabledModels:string[];setEnabledModels:(s:string[])=>void;onUsers:()=>void}){const[tab,setTab]=useState('gps'),[radius,setRadius]=useState(String(threshold)),[modelDraft,setModelDraft]=useState(enabledModels),[error,setError]=useState('');return <><PageHead title="Workspace settings" subtitle="Configure the controls used across analysis and field inspections."><span className="badge outline"><LockKeyhole size={12}/>Administrator only</span></PageHead><div className="settings-layout"><nav className="setting-nav"><button className={tab==='gps'?'active':''} onClick={()=>setTab('gps')}><Crosshair/>Field GPS verification</button><button className={tab==='models'?'active':''} onClick={()=>setTab('models')}><ScanLine/>AI configuration</button><button className={tab==='roles'?'active':''} onClick={()=>setTab('roles')}><Users/>Users & permissions</button></nav><div className="settings-section">{tab==='gps'&&<section className="panel"><div className="panelhead"><h2>On-site proximity threshold</h2><p className="subtext">Control when inspectors can start and submit an on-site update.</p></div><form className="panelbody stack" onSubmit={e=>{e.preventDefault();const n=Number(radius);if(!Number.isInteger(n)||n<25||n>1000)return setError('Enter a whole number from 25 to 1,000 metres.');setThreshold(n);setError('');toast.success(`GPS threshold saved: ${n} metres`)}}><div className="note"><Crosshair/><div><strong>Current threshold: {threshold} metres</strong><p>Inspectors can see all assigned cases. Only on-site updates require a verified location.</p></div></div><label className="field" style={{maxWidth:260}}><span>Maximum distance from assigned location</span><div className="flexline"><input type="number" min={25} max={1000} step={1} value={radius} onChange={e=>setRadius(e.target.value)} required/><span className="muted">metres</span></div></label>{error&&<p className="error">{error}</p>}<p className="subtext" style={{lineHeight:1.8}}>Location must be recent (within two minutes), and the measured distance plus reported GPS accuracy must fit within this radius. Failed or unavailable location verification keeps submission disabled.</p><div><Btn primary type="submit">Save GPS setting <Check/></Btn></div></form></section>}{tab==='models'&&<section className="panel"><div className="panelhead"><h2>AI model configuration</h2><p className="subtext">Choose which models operators can select.</p></div><div className="panelbody">{MODELS.map(m=><div className="model-setting" key={m}><div className="flexline"><span className={`model-icon ${m}`}>{m[0]}</span><div><h3>{m}</h3><p>{m==='Qwen'?'Vision-language analysis':m==='Gemini'?'Multimodal image review':'Visual reasoning and comparison'}</p></div></div><Switch checked={modelDraft.includes(m)} onCheckedChange={v=>setModelDraft(old=>v?[...old,m]:old.filter(x=>x!==m))} aria-label={`Enable ${m}`}/></div>)}<div style={{marginTop:20}}><Note>All three models use simulated responses in this prototype. No API keys or external model connections are required.</Note></div><Btn primary style={{marginTop:23}} onClick={()=>{setEnabledModels(modelDraft);toast.success('AI model configuration saved')}}>Save model settings <Check/></Btn></div></section>}{tab==='roles'&&<section className="panel"><div className="panelhead"><h2>Users & permissions</h2><p className="subtext">Each role has a defined workspace.</p></div><div className="panelbody"><Table className="role-table"><TableBody>{[[ROLES[0],'Manage users, role assignments, AI configuration and GPS settings.'],[ROLES[1],'View dashboards, case details, maps and reports. Read-only.'],[ROLES[2],'Upload imagery, run analysis, review findings, create cases, assign inspectors and close reviewed cases.'],[ROLES[3],'View own assignments and submit verified on-site inspection updates.']].map(([r,d])=><TableRow key={r}><TableCell>{r}</TableCell><TableCell>{d}</TableCell></TableRow>)}</TableBody></Table><Btn primary style={{marginTop:24}} onClick={onUsers}><Users/>Manage users</Btn></div></section>}</div></div></>}
-function MobileApp({user,users,onLogin,cases,threshold,updateCase,onExit,initialCaseId}:{initialCaseId?:string|null;user:User|null;users:User[];onLogin:(u:User)=>void;cases:MiningCase[];threshold:number;updateCase:(id:string,v:Partial<MiningCase>)=>void;onExit:()=>void}){
- type Screen='cases'|'details'|'map'|'gps'|'form'|'success';const[screen,setScreen]=useState<Screen>(initialCaseId?'details':'cases'),[selected,setSelected]=useState<string|null>(initialCaseId||null),[gps,setGps]=useState<Gps|null>(null),[gpsError,setGpsError]=useState(''),[locating,setLocating]=useState(false),[clock,setClock]=useState(Date.now()),[observations,setObservations]=useState(''),[outcome,setOutcome]=useState('none'),[photos,setPhotos]=useState<string[]>([]),[photoBusy,setPhotoBusy]=useState(false),[formError,setFormError]=useState(''),[filter,setFilter]=useState('all'),[uid,setUid]=useState('u4'),[password,setPassword]=useState('Lalibela2026!'),[loginError,setLoginError]=useState('');const photoInput=useRef<HTMLInputElement>(null),submitLock=useRef(false);const c=cases.find(c=>c.id===selected)||cases[0];
- useEffect(()=>{const t=setInterval(()=>setClock(Date.now()),5000);return()=>clearInterval(t)},[]);
- const fresh=!!gps&&clock-gps.at<120000;const distance=gps&&c?distanceMeters(gps,c):null;const verified=isLocationVerified(gps,c,threshold,clock);const actionable=!!c&&['Assigned','Under Inspection'].includes(c.status);const activeStep=!user?0:({cases:1,details:2,map:3,gps:4,form:5,success:6})[screen];const ordered=[...cases].sort((a,b)=>gps?distanceMeters(gps,a)-distanceMeters(gps,b):0);const visible=filter==='all'?ordered:ordered.filter(c=>c.status!=='Closed'&&c.status!=='Inspection Submitted');
- const selectCase=(item:MiningCase)=>{if(selected!==item.id){setPhotos([]);setObservations('');setOutcome('none')}setSelected(item.id);setScreen('details');setFormError('');submitLock.current=false};
- const locate=()=>{setGpsError('');setGps(null);setLocating(true);if(!navigator.geolocation){setGpsError('Location is unavailable on this device.');setLocating(false);return}navigator.geolocation.getCurrentPosition(p=>{setGps({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy,at:p.timestamp,source:'Device GPS'});setClock(Date.now());setLocating(false)},e=>{setGpsError(e.code===1?'Location permission was denied. Enable location access to verify your visit.':e.code===3?'GPS timed out. Move to an open area and try again.':'A reliable GPS position could not be obtained. Try again.');setLocating(false)},{enableHighAccuracy:true,maximumAge:0,timeout:12000})};
- const simulate=(near:boolean)=>{if(!c)return;setGps({lat:c.lat+(near?.00006:.02),lng:c.lng,accuracy:5,at:Date.now(),source:'Simulated GPS'});setClock(Date.now());setGpsError('')};
- const addPhotos=async(files:FileList|null)=>{if(!files)return;const list=Array.from(files);if(photos.length+list.length>6){setFormError('Attach up to six photographs.');return}if(list.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>10*1024*1024)){setFormError('Use JPEG, PNG or WebP photographs, each under 10 MB.');return}setPhotoBusy(true);try{const urls=await Promise.all(list.map(f=>new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result as string);r.onerror=reject;r.readAsDataURL(f)})));setPhotos(old=>[...old,...urls]);setFormError('')}catch{setFormError('A photograph could not be read. Try another image.')}finally{setPhotoBusy(false)}};
- const beginInspection=()=>{if(!c||!user||!verified||!actionable)return;if(c.status==='Assigned')updateCase(c.id,{status:'Under Inspection',history:[...c.history,{event:'On-site inspection started',at:new Date().toISOString(),by:user.name}]});setScreen('form')};
- const submit=()=>{if(!c||!user||submitLock.current)return;if(!gps||!isLocationVerified(gps,c,threshold)){setFormError('Verify your on-site location again before submitting.');return}if(c.inspector!==user.id||c.status!=='Under Inspection')return setFormError('This case is not available for an inspection update.');if(!observations.trim()||outcome==='none')return setFormError('Add observations and select an inspection outcome.');submitLock.current=true;const at=new Date().toISOString();const inspection:Inspection={outcome,observations:observations.trim(),photos,lat:gps.lat,lng:gps.lng,accuracy:gps.accuracy,distance:distanceMeters(gps,c),threshold,at,source:gps.source};updateCase(c.id,{status:'Inspection Submitted',inspection,history:[...c.history,{event:'Inspection submitted',at,by:user.name}]});setScreen('success');toast.success(`Inspection submitted for ${c.id}`)};
- const gpsCard=<div className={`gpscard ${verified?'verified':''}`} role="status">{verified?<ShieldCheck/>:<Crosshair/>}<h3>{locating?'Checking your location…':verified?'Location verified':gps?fresh?'Outside verification radius':'Location check expired':'Verify your location'}</h3><p>{verified?`You are ${Math.round(distance||0)} m from the assigned location.`:gps&&!fresh?'Refresh your location to continue.':gps?`You are ${Math.round(distance||0).toLocaleString()} m away (±${Math.round(gps.accuracy)} m).`:`Get within ${threshold} m of the assigned location to enable on-site updates.`}</p>{gps&&<div className="gps-meta"><div>Coordinates<strong>{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}</strong></div><div>Accuracy / threshold<strong>±{Math.round(gps.accuracy)} m / {threshold} m</strong></div><div>Source<strong>{gps.source}</strong></div><div>Location checked<strong>{displayTime(new Date(gps.at).toISOString())}</strong></div></div>}</div>;
- return <><PageHead title="Field inspector app" subtitle="Take the investigation from the map to the ground."><span className="demo-label"><Smartphone/>MOBILE PROTOTYPE</span></PageHead><div className="mobile-stage"><aside className="mobile-side"><div className="eyebrow" style={{color:'#56847b',marginBottom:18}}>FIELD WORKFLOW</div><h2>Every visit.<br/>A verifiable record.</h2><p>Follow an assigned case through location verification, observations, and submission.</p><div className="mobile-steps">{['Inspector login','Assigned cases','Case details','Map & navigation','GPS verification','Inspection update','Submission confirmation'].map((s,i)=><div key={s} className={`mobile-step ${i===activeStep?'active':''}`}><strong>{i<activeStep?<Check size={12}/>:i+1}</strong>{s}</div>)}</div></aside><div><div className="phone"><div className="phonestatus"><span>9:41</span><span className="flexline" style={{gap:4}}><Signal/><Wifi/><BatteryFull/></span></div>{user&&<header className="phoneheader">{screen==='cases'?<Brand/>:<><button aria-label="Back to assigned cases" onClick={()=>setScreen(screen==='form'?'gps':'cases')}><ChevronLeft size={21}/></button><div className="grow"><h3 style={{fontSize:15}}>{screen==='success'?'Inspection submitted':screen==='form'?'Inspection update':screen==='gps'?'Location verification':screen==='map'?'Map & navigation':'Case details'}</h3><span className="caseid" style={{fontSize:11}}>{c?.id}</span></div></>}{screen==='cases'&&<span className="avatar" style={{marginLeft:'auto'}}>{initials(user.name)}</span>}</header>}<div className="phonecontent">{!user?<div className="phone-login"><Brand/><h1>Ready for the field?</h1><p className="subtext">Sign in to view your assigned inspections.</p><form onSubmit={e=>{e.preventDefault();const u=users.find(u=>u.id===uid&&u.role==='Field Inspector');if(!u?.active||password!=='Lalibela2026!')return setLoginError('Choose an active sample inspector and use Lalibela2026!');onLogin(u)}}><label className="field"><span>Sample inspector</span><Pick value={uid} onChange={setUid} options={users.filter(u=>u.role==='Field Inspector').map(u=>({value:u.id,label:u.name}))} label="Mobile inspector account"/></label><label className="field"><span>Email</span><input readOnly type="email" value={users.find(u=>u.id===uid)?.email||''}/></label><label className="field"><span>Password</span><input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>{loginError&&<p className="error" style={{marginTop:12}}>{loginError}</p>}<Btn primary type="submit" className="full" style={{marginTop:25}}>Sign in <ArrowRight/></Btn></form><div style={{marginTop:25}}><Note>Demo accounts only. Sample credentials are prefilled.</Note></div></div>:screen==='cases'?<><div className="eyebrow muted" style={{fontSize:10,marginBottom:6}}>HELLO, {user.name.split(' ')[0].toUpperCase()}</div><div className="between"><h1>My assignments</h1><span className="badge green">{cases.length}</span></div><p className="subtext">All your cases, in one place.</p><div className="flexline" style={{margin:'17px 0'}}><Tabs value={filter} onValueChange={setFilter}><TabsList><TabsTrigger value="all">All cases</TabsTrigger><TabsTrigger value="active">Needs inspection</TabsTrigger></TabsList></Tabs><button className="btn iconbtn" aria-label="View assigned cases on map" onClick={()=>setScreen('map')}><MapIcon size={17}/></button></div><div className="note" style={{fontSize:12}}><Navigation/>{gps&&fresh?`${gps.source} active. Nearby cases are highlighted.`:'All assignments are visible. Check GPS to highlight nearby cases.'}</div>{visible.map(item=>{const d=gps?distanceMeters(gps,item):null;const near=isLocationVerified(gps,item,threshold,clock);return <button className={`case-card full ${near?'nearby':''}`} style={{textAlign:'left'}} key={item.id} onClick={()=>selectCase(item)}><div className="between"><span className="caseid" style={{fontSize:12}}>{item.id}</span><span className={`badge ${item.priority==='High'?'amber':'outline'}`}>{item.priority}</span></div><h3>{item.area}</h3><div className="muted"><MapPin size={12} style={{display:'inline'}}/> {item.region} · {d===null?'Distance unavailable':d<1000?`${Math.round(d)} m away`:`${(d/1000).toFixed(1)} km away`}</div><div className="between" style={{marginTop:16}}><StatusBadge status={item.status}/>{near?<span className="badge green">Nearby</span>:<ChevronRight size={15}/>}</div></button>})}{!visible.length&&<Empty><EmptyHeader><EmptyTitle>No assignments</EmptyTitle><EmptyDescription>Assigned cases will appear here.</EmptyDescription></EmptyHeader></Empty>}</>:!c?<Empty><EmptyHeader><EmptyTitle>No case selected</EmptyTitle><EmptyDescription>You have no assigned cases yet.</EmptyDescription></EmptyHeader></Empty>:screen==='details'?<><div className="flexline wrap"><StatusBadge status={c.status}/><span className="badge amber">Suspected violation</span></div><h1 style={{fontSize:24,margin:'15px 0 8px'}}>{c.area}</h1><p className="subtext" style={{marginBottom:16}}><MapPin size={13} style={{display:'inline'}}/> {c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}</p><MiningMap cases={[c]} detail image={c.image} polygons/><p className="subtext" style={{fontSize:10}}>Illustrative imagery · fictional overlays · sample capture: {c.capture}</p><h3 style={{marginTop:21}}>{c.title}</h3><p className="subtext" style={{lineHeight:1.8,marginTop:8}}>{c.observations}</p><div className="flexline" style={{marginTop:12}}>{c.models.map(m=><span className="badge" key={m}>{m}</span>)}</div><Flow status={c.status}/><div className="sectiontitle">Inspection outcome</div><Note>{c.inspection?.outcome||'Awaiting field verification'}</Note><div className="sectiontitle">Inspection history</div><div className="timeline">{c.history.map((h,i)=><div className="timeline-item" key={i}>{h.event}<p>{displayTime(h.at)}</p></div>)}</div><Btn className="full" onClick={()=>setScreen('map')}><Navigation/>Map & navigation</Btn>{actionable&&<Btn primary className="full" style={{marginTop:10}} onClick={()=>setScreen('gps')}><Crosshair/>Verify location & inspect</Btn>}</>:screen==='map'?<><h2>{c.area}</h2><p className="subtext" style={{marginBottom:16}}>Assigned destination · {c.region}</p><MiningMap cases={cases} selected={c.id} onSelect={selectCase}/><div className="panelbody panel" style={{marginTop:17,padding:15}}><div className="flexline"><MapPin size={20} color="#2d8676"/><div><span className="caseid">{c.id}</span><p className="subtext" style={{fontSize:12}}>{c.lat.toFixed(5)}° N, {c.lng.toFixed(5)}° E</p></div></div><p className="subtext" style={{fontSize:12,marginTop:12}}>Distance: {distance===null?'check GPS first':`${(distance/1000).toFixed(2)} km straight-line`}</p></div><a className="btn primary full" style={{marginTop:18}} href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=driving`} target="_blank" rel="noreferrer"><Navigation size={16}/>Open navigation <ExternalLink size={14}/></a><p className="subtext" style={{fontSize:11,margin:'8px 0 18px'}}>Opens directions in Google Maps. Routes are provided there.</p><Btn className="full" onClick={()=>setScreen('gps')}><Crosshair/>Verify on-site location</Btn></>:screen==='gps'?<><h2>{c.area}</h2><p className="subtext">Check in at the assigned location.</p>{gpsCard}{gpsError&&<p className="error" role="alert" style={{marginBottom:14}}>{gpsError}</p>}<Btn className="full" disabled={locating} onClick={locate}>{locating?<Loader2 className="animate-spin"/>:<Crosshair/>}{locating?'Getting GPS position…':'Use phone GPS'}</Btn><Btn primary className="full" style={{marginTop:12}} disabled={!verified||!actionable} onClick={beginInspection}>{verified?<CheckCircle2/>:<LockKeyhole/>}{c.status==='Under Inspection'?'Continue inspection':'Start on-site inspection'}</Btn><p className="subtext" style={{fontSize:12,lineHeight:1.75,marginTop:12}}>On-site updates require a recent GPS fix within {threshold} m, including the reported accuracy.</p><details className="demo-controls"><summary style={{fontSize:12,fontWeight:600,cursor:'pointer'}}>Try demo location scenarios</summary><p>Use clearly labeled simulated GPS to explore the prototype without visiting the site.</p><Btn onClick={()=>simulate(true)}>Simulate on site</Btn><Btn onClick={()=>simulate(false)}>Simulate outside radius</Btn></details></>:screen==='form'?<><div className={`note ${verified?'':'amber'}`}><ShieldCheck/><div><strong>{verified?'Location verified':'Location needs verification'}</strong><div style={{fontSize:11}}>{gps?.source} · {Math.round(distance||0)} m from site</div></div></div><form onSubmit={e=>{e.preventDefault();submit()}}><label className="field"><span>Inspection observations *</span><textarea required rows={4} placeholder="Describe site activity, permit checks, and evidence observed…" value={observations} onChange={e=>setObservations(e.target.value)}/></label><label className="field"><span>Site photographs</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple capture="environment" ref={photoInput} hidden onChange={e=>addPhotos(e.target.files)}/><Btn type="button" className="full" disabled={photoBusy} onClick={()=>photoInput.current?.click()}><Camera/>{photoBusy?'Adding photographs…':'Take or upload photographs'}</Btn><small className="muted" style={{fontSize:11}}>Up to 6 photos · 10 MB each · optional</small></label>{photos.length>0&&<div className="photogrid">{photos.map((p,i)=><div key={i} style={{position:'relative'}}><img src={p} alt={`Site photograph ${i+1}`}/><button type="button" aria-label={`Remove photograph ${i+1}`} style={{position:'absolute',top:1,right:1,background:'white',borderRadius:20}} onClick={()=>setPhotos(old=>old.filter((_,j)=>j!==i))}><X size={15}/></button></div>)}</div>}<label className="field"><span>Inspection outcome *</span><Pick value={outcome} onChange={setOutcome} options={[{value:'none',label:'Select an outcome'},...OUTCOMES]} label="Inspection outcome"/></label><p className="subtext" style={{fontSize:11}}>The outcome is recorded separately. Submitting changes the case status to Inspection Submitted.</p><div className="gps-meta" style={{marginTop:20}}><div>GPS coordinates<strong>{gps?.lat.toFixed(5)}, {gps?.lng.toFixed(5)}</strong></div><div>Submission time<strong>Captured on submission</strong></div></div>{formError&&<p className="error" role="alert" style={{marginTop:15}}>{formError}</p>}{!verified&&<Btn type="button" className="full" style={{marginTop:15}} onClick={()=>setScreen('gps')}>Verify location again</Btn>}<Btn type="submit" primary className="full" style={{marginTop:24}} disabled={!verified||!observations.trim()||outcome==='none'||photoBusy}><Send/>Submit inspection update</Btn></form></>:screen==='success'&&c.inspection?<div className="submission-success"><div className="success-icon"><CheckCircle2/></div><h1>Inspection submitted</h1><p>Your update is linked to the case and ready for operator review.</p><div className="submission-receipt"><div className="info-item"><span>Case ID</span><strong className="caseid">{c.id}</strong></div><div className="info-item"><span>Case status</span><StatusBadge status={c.status}/></div><div className="info-item"><span>Inspection outcome</span><p>{c.inspection.outcome}</p></div><div className="info-item"><span>Location & source</span><p className="mono">{c.inspection.lat.toFixed(5)}, {c.inspection.lng.toFixed(5)}</p><small className="muted">{c.inspection.source} · ±{c.inspection.accuracy} m</small></div><div className="info-item"><span>Submitted at</span><p>{displayTime(c.inspection.at)}</p></div><div className="info-item" style={{margin:0}}><span>Photographs</span><p>{c.inspection.photos.length} attached</p></div></div><Btn primary className="full" onClick={()=>setScreen('cases')}>Back to assigned cases <ArrowRight/></Btn><p style={{fontSize:11}}>Saved within this prototype session.</p></div>:null}</div>{user&&<nav className="phonebottom"><button className={['cases','details','form','success'].includes(screen)?'active':''} onClick={()=>setScreen('cases')}><FolderOpen/>My cases</button><button className={screen==='map'?'active':''} onClick={()=>setScreen('map')}><MapIcon/>Map</button><button className={screen==='gps'?'active':''} onClick={()=>setScreen('gps')}><Crosshair/>GPS</button></nav>}</div>{!user&&<div className="preview-back"><button className="textbtn" onClick={onExit}><ChevronLeft size={15}/>Back to web login</button></div>}</div><aside className="mobile-side"><div><span className="badge outline"><ShieldCheck size={12}/>Field verification</span><p>Assigned cases remain visible at any distance. GPS highlights nearby cases and enables on-site updates.</p><div className="panel" style={{padding:17,marginTop:23}}><span className="small muted">Verification radius</span><div style={{fontSize:30,marginTop:4,fontWeight:600}}>{threshold} <span style={{fontSize:16,fontWeight:400,color:'#8b9aa3'}}>metres</span></div><p style={{fontSize:12,marginTop:5}}>Configured by the administrator.</p></div></div><div><div className="sectiontitle">Connected to your workspace</div><p style={{fontSize:13}}>The same Case IDs, assignments, inspection outcomes and status changes appear in the web dashboard and reports.</p><div className="note" style={{marginTop:22}}><FlaskConical/>This is a simulated field workflow. No real investigations are recorded.</div></div></aside></div></>
+function MainNav({
+  user,
+  page,
+  navigate,
+  onLogout,
+}: {
+  user: User;
+  page: Page;
+  navigate: (p: Page) => void;
+  onLogout: () => void;
+}) {
+  const { setOpenMobile } = useSidebar();
+  const allowed = navItems(user.role);
+  return (
+    <Sidebar>
+      <SidebarHeader className="nav-brand">
+        <Brand />
+      </SidebarHeader>
+      <div className="nav-context">
+        <Globe />
+        <div>
+          Ethiopia workspace<small>National mining monitoring</small>
+        </div>
+      </div>
+      <SidebarContent>
+        <div className="nav-label">WORKSPACE</div>
+        <SidebarMenu className="nav-group">
+          {allowed
+            .filter((i) => i.id !== "users" && i.id !== "settings")
+            .map((n) => (
+              <SidebarMenuItem key={n.id}>
+                <SidebarMenuButton
+                  className="nav-btn"
+                  isActive={page === n.id}
+                  onClick={() => {
+                    navigate(n.id);
+                    setOpenMobile(false);
+                  }}
+                >
+                  <n.icon />
+                  <span>{n.name}</span>
+                  {n.id === "mobile" && (
+                    <ArrowUpRight size={13} style={{ marginLeft: "auto" }} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+        </SidebarMenu>
+        {user.role === "Administrator" && (
+          <>
+            <div className="nav-divider" />
+            <div className="nav-label">ADMINISTRATION</div>
+            <SidebarMenu className="nav-group">
+              {allowed
+                .filter((i) => i.id === "users" || i.id === "settings")
+                .map((n) => (
+                  <SidebarMenuItem key={n.id}>
+                    <SidebarMenuButton
+                      className="nav-btn"
+                      isActive={page === n.id}
+                      onClick={() => {
+                        navigate(n.id);
+                        setOpenMobile(false);
+                      }}
+                    >
+                      <n.icon />
+                      <span>{n.name}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+          </>
+        )}
+      </SidebarContent>
+      <div className="nav-footnote">
+        <div className="flexline" style={{ color: "#c3d5db", marginBottom: 5 }}>
+          <FlaskConical size={14} />
+          Pilot workspace
+        </div>
+        AI findings require human review and on-site verification.
+      </div>
+      <SidebarFooter className="nav-bottom">
+        <div className="between">
+          <div className="flexline">
+            <span className="avatar teal">{initials(user.name)}</span>
+            <div style={{ fontSize: 12, color: "#deeaee" }}>
+              {user.name}
+              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
+                {user.role}
+              </div>
+            </div>
+          </div>
+          <button
+            aria-label="Sign out and switch account"
+            title="Switch account"
+            onClick={onLogout}
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+function navItems(
+  role: Role,
+): { id: Page; name: string; icon: typeof MapIcon }[] {
+  const common: { id: Page; name: string; icon: typeof MapIcon }[] = [
+    { id: "dashboard", name: "Overview", icon: LayoutDashboard },
+    { id: "analysis", name: "Imagery & analysis", icon: ScanLine },
+    {
+      id: "cases",
+      name: role === "Field Inspector" ? "My assigned cases" : "Case register",
+      icon: FolderOpen,
+    },
+    { id: "reports", name: "Reports", icon: FileText },
+    { id: "mobile", name: "Field mobile app", icon: Smartphone },
+    { id: "users", name: "Users & roles", icon: Users },
+    { id: "settings", name: "Settings", icon: Settings },
+  ];
+  return common.filter((n) =>
+    role === "Field Inspector"
+      ? ["cases", "mobile"].includes(n.id)
+      : role === "Administrator"
+        ? ["dashboard", "cases", "reports", "users", "settings"].includes(n.id)
+        : role === "Dashboard Viewer"
+          ? ["dashboard", "cases", "reports"].includes(n.id)
+          : ["dashboard", "analysis", "cases", "reports"].includes(n.id),
+  );
+}
+export default function Home() {
+  const [users, setUsers] = useState(USERS),
+    [userId, setUserId] = useState<string | null>(null),
+    [page, setPage] = useState<Page>("dashboard"),
+    [cases, setCases] = useState(INITIAL_CASES),
+    [selected, setSelected] = useState<string | null>(null),
+    [mobileCaseId, setMobileCaseId] = useState<string | null>(null),
+    [threshold, setThreshold] = useState(100),
+    [enabledModels, setEnabledModels] = useState(MODELS),
+    [findings, setFindings] = useState<Finding[]>([]);
+  const user = users.find((u) => u.id === userId) || null;
+  const activeCase = cases.find((c) => c.id === selected);
+  const allowedCases =
+    user?.role === "Field Inspector"
+      ? cases.filter((c) => c.inspector === user.id)
+      : cases;
+  const login = (u: User) => {
+    setUserId(u.id);
+    if (page !== "mobile")
+      setPage(u.role === "Field Inspector" ? "cases" : "dashboard");
+    toast.success(`Welcome, ${u.name.split(" ")[0]}`);
+  };
+  const navigate = (p: Page) => {
+    if (user && navItems(user.role).some((n) => n.id === p)) {
+      setPage(p);
+      setSelected(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+  const updateCase = (id: string, change: Partial<MiningCase>) =>
+    setCases((old) => old.map((c) => (c.id === id ? { ...c, ...change } : c)));
+  const createCase = (f: Finding, observations: string, inspector: string) => {
+    if (user?.role !== "System Operator" || f.caseId) return;
+    const id = `LAL-2026-${String(Math.max(...cases.map((c) => Number(c.id.split("-").at(-1)))) + 1).padStart(4, "0")}`;
+    const now = new Date().toISOString();
+    const history = [
+      {
+        event: "Case created from reviewed AI findings",
+        at: now,
+        by: user.name,
+      },
+    ];
+    if (inspector)
+      history.push({
+        event: "Assigned to field inspector",
+        at: now,
+        by: user.name,
+      });
+    const c: MiningCase = {
+      id,
+      area: f.area.name,
+      region: f.area.region,
+      lat: f.area.lat,
+      lng: f.area.lng,
+      created: now.slice(0, 10),
+      capture: f.capture,
+      status: inspector ? "Assigned" : "New",
+      inspector,
+      models: f.models,
+      title: f.title,
+      observations,
+      priority: "High",
+      detections: 1,
+      history,
+      image: f.image,
+      imageName: f.imageName,
+    };
+    setCases((old) => [c, ...old]);
+    setFindings((old) =>
+      old.map((v) => (v.id === f.id ? { ...v, caseId: id } : v)),
+    );
+    toast.success(`${id} created${inspector ? " and assigned" : ""}`);
+    setSelected(id);
+  };
+  useEffect(() => {
+    const context = (document as any).modelContext;
+    if (!context?.registerTool || !user) return;
+    const lifecycle = new AbortController();
+    const register = (tool: any) => {
+      try {
+        Promise.resolve(
+          context.registerTool(tool, { signal: lifecycle.signal }),
+        ).catch(() => {});
+      } catch {}
+    };
+    register({
+      name: "list_lalibela_cases",
+      description:
+        "Read sample cases visible to the currently signed-in demo role.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true },
+      execute: () => ({
+        cases: allowedCases.map((c) => ({
+          id: c.id,
+          area: c.area,
+          status: c.status,
+          outcome: c.inspection?.outcome || null,
+        })),
+        sampleData: true,
+      }),
+    });
+    register({
+      name: "open_lalibela_case",
+      description: "Open a sample case detail panel without changing the case.",
+      inputSchema: {
+        type: "object",
+        properties: { caseId: { type: "string" } },
+        required: ["caseId"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false },
+      execute: (input: unknown) => {
+        const id = (input as { caseId?: string })?.caseId;
+        if (typeof id !== "string" || !allowedCases.some((c) => c.id === id))
+          throw new Error("Case is unavailable for this demo role");
+        setSelected(id);
+        return { opened: id };
+      },
+    });
+    return () => lifecycle.abort();
+  }, [user, allowedCases]);
+  if (!user && page !== "mobile")
+    return (
+      <>
+        <Login
+          users={users}
+          onLogin={login}
+          onMobile={() => setPage("mobile")}
+        />
+        <Toaster theme="light" />
+      </>
+    );
+  const mobileContent = (
+    <MobileApp
+      initialCaseId={mobileCaseId}
+      user={user}
+      users={users}
+      onLogin={login}
+      cases={user ? cases.filter((c) => c.inspector === user.id) : []}
+      threshold={threshold}
+      updateCase={updateCase}
+      onExit={() => {
+        setPage("dashboard");
+        setUserId(null);
+      }}
+    />
+  );
+  if (!user)
+    return (
+      <>
+        <div className="prototypebar">
+          <strong>PROJECT LALIBELA · INTERACTIVE PROTOTYPE</strong>
+          <button className="textbtn" onClick={() => setPage("dashboard")}>
+            Web login <ArrowUpRight />
+          </button>
+        </div>
+        <div className="workspace mobile-workspace">{mobileContent}</div>
+        <Toaster theme="light" />
+      </>
+    );
+  return (
+    <SidebarProvider
+      style={{ "--sidebar-width": "237px" } as React.CSSProperties}
+    >
+      <MainNav
+        user={user}
+        page={page}
+        navigate={navigate}
+        onLogout={() => {
+          setUserId(null);
+          setSelected(null);
+          setPage("dashboard");
+        }}
+      />
+      <SidebarInset className="min-w-0">
+        <header className="topbar">
+          <div className="flexline">
+            <SidebarTrigger className="mobileonly" />
+            <div className="breadcrumb">
+              <span>Workspace</span>
+              <ChevronRight size={13} />
+              <strong>
+                {navItems(user.role).find((n) => n.id === page)?.name}
+              </strong>
+            </div>
+          </div>
+          <div className="topbar-right">
+            <span className="hide-mobile muted">17 September 2026</span>
+            <span className="badge outline">
+              {user.role === "Dashboard Viewer" ? (
+                <>
+                  <Eye size={12} />
+                  Read-only access
+                </>
+              ) : (
+                user.role
+              )}
+            </span>
+            <span className="avatar">{initials(user.name)}</span>
+          </div>
+        </header>
+        <div className="prototypebar">
+          <span>
+            <strong>INTERACTIVE PROTOTYPE</strong> &nbsp; Sample data ·
+            simulated AI · session only
+          </span>
+          <button
+            onClick={() => {
+              setUserId(null);
+              setSelected(null);
+              setPage("dashboard");
+            }}
+            className="textbtn"
+            style={{ fontSize: 12 }}
+          >
+            Switch account <LogOut size={12} />
+          </button>
+        </div>
+        <div
+          className={`workspace animate-enter ${page === "mobile" ? "mobile-workspace" : ""}`}
+          key={page}
+        >
+          {page === "dashboard" && (
+            <Dashboard
+              cases={cases}
+              users={users}
+              onSelect={(c) => setSelected(c.id)}
+              onAnalyze={
+                user.role === "System Operator"
+                  ? () => navigate("analysis")
+                  : undefined
+              }
+              onReports={() => navigate("reports")}
+              pending={findings.filter((f) => !f.caseId)}
+            />
+          )}
+          {page === "analysis" && user.role === "System Operator" && (
+            <Analysis
+              enabledModels={enabledModels}
+              findings={findings}
+              setFindings={setFindings}
+              inspectors={users.filter(
+                (u) => u.role === "Field Inspector" && u.active,
+              )}
+              createCase={createCase}
+            />
+          )}
+          {page === "cases" && (
+            <CasesView
+              cases={allowedCases}
+              user={user}
+              users={users}
+              onSelect={(c) => setSelected(c.id)}
+              onMobile={() => navigate("mobile")}
+            />
+          )}
+          {page === "reports" && user.role !== "Field Inspector" && (
+            <Reports
+              cases={cases}
+              pending={findings.filter((f) => !f.caseId)}
+              users={users}
+              onSelect={(c) => setSelected(c.id)}
+            />
+          )}
+          {page === "users" && user.role === "Administrator" && (
+            <UserManagement
+              users={users}
+              setUsers={setUsers}
+              current={user.id}
+            />
+          )}
+          {page === "settings" && user.role === "Administrator" && (
+            <SettingsView
+              threshold={threshold}
+              setThreshold={setThreshold}
+              enabledModels={enabledModels}
+              setEnabledModels={setEnabledModels}
+              onUsers={() => navigate("users")}
+            />
+          )}
+          {page === "mobile" &&
+            user.role === "Field Inspector" &&
+            mobileContent}
+        </div>
+      </SidebarInset>
+      <CaseDetail
+        c={
+          activeCase && allowedCases.some((c) => c.id === activeCase.id)
+            ? activeCase
+            : undefined
+        }
+        user={user}
+        users={users}
+        onClose={() => setSelected(null)}
+        updateCase={updateCase}
+        onMobile={() => {
+          setMobileCaseId(selected);
+          navigate("mobile");
+        }}
+      />
+      <Toaster theme="light" />
+    </SidebarProvider>
+  );
+}
+function Dashboard({
+  cases,
+  users,
+  onSelect,
+  onAnalyze,
+  onReports,
+  pending,
+}: {
+  cases: MiningCase[];
+  users: User[];
+  onSelect: (c: MiningCase) => void;
+  onAnalyze?: () => void;
+  onReports: () => void;
+  pending: Finding[];
+}) {
+  const [region, setRegion] = useState("All locations"),
+    [status, setStatus] = useState("All statuses"),
+    [start, setStart] = useState("2026-09-01"),
+    [end, setEnd] = useState("2026-09-30");
+  const filtered = cases.filter(
+    (c) =>
+      (region === "All locations" || c.region === region) &&
+      (status === "All statuses" || c.status === status) &&
+      (!start || c.created >= start) &&
+      (!end || c.created <= end),
+  );
+  return (
+    <>
+      <PageHead
+        title="Monitoring overview"
+        subtitle="A clear view of mining activity and ongoing investigations."
+      >
+        <Btn onClick={onReports}>
+          <Download />
+          View reports
+        </Btn>
+        {onAnalyze && (
+          <Btn primary onClick={onAnalyze}>
+            <Plus />
+            New analysis
+          </Btn>
+        )}
+      </PageHead>
+      <Stats
+        cases={filtered}
+        extra={
+          status === "All statuses"
+            ? pending.filter(
+                (f) =>
+                  (region === "All locations" || f.area.region === region) &&
+                  (!start || f.created >= start) &&
+                  (!end || f.created <= end),
+              ).length
+            : 0
+        }
+      />
+      <FilterBar
+        {...{
+          region,
+          setRegion,
+          status,
+          setStatus,
+          start,
+          setStart,
+          end,
+          setEnd,
+        }}
+      />
+      {start > end && (
+        <Note amber>The start date must be before the end date.</Note>
+      )}
+      <div className="twocol">
+        <div className="panel map-panel">
+          <div className="panelhead between">
+            <div className="flexline">
+              <h2>Mining activity map</h2>
+              <span className="badge outline">Ethiopia</span>
+            </div>
+            <span className="small muted hide-mobile">
+              {new Set(filtered.map((c) => c.area)).size} monitored areas
+            </span>
+          </div>
+          <MiningMap cases={filtered} onSelect={onSelect} />
+          <div className="maplegend">
+            <span>
+              <i className="legend-dot" />
+              Active investigation
+            </span>
+            <span>
+              <i className="legend-dot" style={{ background: "#3e8c78" }} />
+              Closed
+            </span>
+            <span style={{ marginLeft: "auto" }}>Select a site to explore</span>
+          </div>
+        </div>
+        <div className="panel overview-side">
+          <div className="panelhead">
+            <h2>Investigation pipeline</h2>
+          </div>
+          <div className="panelbody">
+            <div className="between" style={{ marginBottom: 18 }}>
+              <div>
+                <div className="statvalue" style={{ fontSize: 30 }}>
+                  {filtered.filter((c) => c.status !== "Closed").length}
+                </div>
+                <span className="small muted">Active investigations</span>
+              </div>
+              <Activity size={32} color="#a2c3b9" />
+            </div>
+            {STATUSES.map((s, i) => (
+              <React.Fragment key={s}>
+                <div className="statusline">
+                  <span>
+                    <i
+                      className="legend-dot"
+                      style={{ background: STATUS_COLORS[i], marginRight: 0 }}
+                    />
+                    {s}
+                  </span>
+                  <strong>
+                    {filtered.filter((c) => c.status === s).length}
+                  </strong>
+                </div>
+                <div className="tinybar">
+                  <span
+                    style={{
+                      width: `${filtered.length ? (filtered.filter((c) => c.status === s).length / filtered.length) * 100 : 0}%`,
+                      background: STATUS_COLORS[i],
+                    }}
+                  />
+                </div>
+              </React.Fragment>
+            ))}
+            <div style={{ marginTop: 20 }}>
+              <Note>
+                AI findings are suspected violations until verified through
+                inspection.
+              </Note>
+            </div>
+          </div>
+        </div>
+      </div>
+      <CaseTable
+        cases={filtered}
+        users={users}
+        onSelect={onSelect}
+        caption="Cases at a glance"
+      />
+    </>
+  );
+}
+function CasesView({
+  cases,
+  users,
+  user,
+  onSelect,
+  onMobile,
+}: {
+  cases: MiningCase[];
+  users: User[];
+  user: User;
+  onSelect: (c: MiningCase) => void;
+  onMobile: () => void;
+}) {
+  const [view, setView] = useState("list"),
+    [search, setSearch] = useState(""),
+    [status, setStatus] = useState("All statuses");
+  const filtered = cases.filter(
+    (c) =>
+      (c.id + " " + c.area + " " + c.title)
+        .toLowerCase()
+        .includes(search.toLowerCase()) &&
+      (status === "All statuses" || c.status === status),
+  );
+  return (
+    <>
+      <PageHead
+        title={
+          user.role === "Field Inspector"
+            ? "My assigned cases"
+            : "Case register"
+        }
+        subtitle={
+          user.role === "Field Inspector"
+            ? "All of your assignments, wherever you are. Verify your location to submit an on-site update."
+            : "Review evidence, inspection history, and progress for every investigation."
+        }
+      >
+        {user.role === "Field Inspector" && (
+          <Btn primary onClick={onMobile}>
+            <Smartphone />
+            Open field app
+          </Btn>
+        )}
+      </PageHead>
+      <div className="between wrap" style={{ marginBottom: 21 }}>
+        <div className="flexline wrap">
+          <div
+            className="flexline"
+            style={{
+              background: "white",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "0 12px",
+            }}
+          >
+            <Search size={16} color="#82959e" />
+            <input
+              aria-label="Search cases"
+              className="input"
+              style={{ border: 0, minWidth: 210 }}
+              placeholder="Search Case ID or mining area…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Pick
+            value={status}
+            onChange={setStatus}
+            options={["All statuses", ...STATUSES]}
+            label="Case status"
+          />
+        </div>
+        <Tabs value={view} onValueChange={setView}>
+          <TabsList>
+            <TabsTrigger value="list">
+              <List size={15} />
+              List
+            </TabsTrigger>
+            <TabsTrigger value="map">
+              <MapIcon size={15} />
+              Map
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      {view === "map" ? (
+        <div className="panel">
+          <MiningMap cases={filtered} onSelect={onSelect} />
+          <div className="maplegend">
+            {filtered.length} assigned or registered cases · select a site to
+            open case details
+          </div>
+        </div>
+      ) : user.role === "Field Inspector" ? (
+        <div className="inspectioncards">
+          {filtered.map((c) => (
+            <button
+              className="panel inspectioncard"
+              style={{ textAlign: "left" }}
+              key={c.id}
+              onClick={() => onSelect(c)}
+            >
+              <div className="between">
+                <span className="caseid">{c.id}</span>
+                <StatusBadge status={c.status} />
+              </div>
+              <h2>{c.area}</h2>
+              <p>
+                <MapPin
+                  size={13}
+                  style={{ display: "inline", marginRight: 4 }}
+                />
+                {c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}
+              </p>
+              <div
+                className="small"
+                style={{ marginBottom: 16, lineHeight: 1.7 }}
+              >
+                {c.title}
+              </div>
+              <div className="between">
+                <span className="badge amber">Suspected violation</span>
+                <ChevronRight size={17} />
+              </div>
+            </button>
+          ))}
+          {!filtered.length && (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No assigned cases match</EmptyTitle>
+                <EmptyDescription>
+                  Change your search or status filter.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+        </div>
+      ) : (
+        <CaseTable cases={filtered} users={users} onSelect={onSelect} />
+      )}
+    </>
+  );
+}
+function CaseDetail({
+  c,
+  user,
+  users,
+  onClose,
+  updateCase,
+  onMobile,
+}: {
+  c?: MiningCase;
+  user: User;
+  users: User[];
+  onClose: () => void;
+  updateCase: (id: string, v: Partial<MiningCase>) => void;
+  onMobile: () => void;
+}) {
+  const [assignee, setAssignee] = useState("none");
+  useEffect(() => setAssignee(c?.inspector || "none"), [c]);
+  return (
+    <Sheet
+      open={!!c}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <SheetContent className="case-sheet">
+        {c && (
+          <>
+            <SheetHeader style={{ padding: 0 }}>
+              <SheetDescription className="caseid">{c.id}</SheetDescription>
+              <SheetTitle>{c.area}</SheetTitle>
+            </SheetHeader>
+            <div className="flexline wrap" style={{ marginTop: 15 }}>
+              <StatusBadge status={c.status} />
+              <span className="badge amber">AI suspected violation</span>
+              <span className="badge outline">{c.priority} priority</span>
+            </div>
+            <Flow status={c.status} />
+            <MiningMap cases={[c]} detail image={c.image} polygons />
+            <p className="subtext" style={{ fontSize: 11 }}>
+              Illustrative Shakiso imagery unless uploaded · capture dates below
+              are sample metadata.
+            </p>
+            <div className="info-grid">
+              <div className="info-item">
+                <span>Assigned inspector</span>
+                <p>
+                  {users.find((u) => u.id === c.inspector)?.name ||
+                    "Unassigned"}
+                </p>
+              </div>
+              <div className="info-item">
+                <span>Location</span>
+                <p>
+                  {c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}
+                </p>
+              </div>
+              <div className="info-item">
+                <span>Capture date (sample)</span>
+                <p>{c.capture}</p>
+              </div>
+              <div className="info-item">
+                <span>AI models</span>
+                <p>{c.models.join(" · ")}</p>
+              </div>
+            </div>
+            <h3>{c.title}</h3>
+            <p className="subtext" style={{ lineHeight: 1.8 }}>
+              {c.observations}
+            </p>
+            <div className="sectiontitle">Inspection outcome</div>
+            {c.inspection ? (
+              <>
+                <span
+                  className={`badge ${c.inspection.outcome === OUTCOMES[0] ? "red" : c.inspection.outcome === OUTCOMES[1] ? "green" : "amber"}`}
+                >
+                  {c.inspection.outcome}
+                </span>
+                <p
+                  className="subtext"
+                  style={{ marginTop: 10, lineHeight: 1.8 }}
+                >
+                  {c.inspection.observations}
+                </p>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span>Submitted at</span>
+                    <p>{displayTime(c.inspection.at)}</p>
+                  </div>
+                  <div className="info-item">
+                    <span>GPS evidence</span>
+                    <p>
+                      {c.inspection.lat.toFixed(5)},{" "}
+                      {c.inspection.lng.toFixed(5)}
+                    </p>
+                    <small className="muted">
+                      {c.inspection.source} · ±
+                      {Math.round(c.inspection.accuracy)} m
+                    </small>
+                  </div>
+                </div>
+                {c.inspection.photos.length > 0 && (
+                  <div className="photogrid">
+                    {c.inspection.photos.map((p, i) => (
+                      <a href={p} key={i} target="_blank" rel="noreferrer">
+                        <img src={p} alt={`Inspection photo ${i + 1}`} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <Note>
+                No outcome recorded. The suspected violation is awaiting field
+                verification.
+              </Note>
+            )}
+            <div className="sectiontitle">Inspection & case history</div>
+            <div className="timeline">
+              {c.history.map((h, i) => (
+                <div className="timeline-item" key={i}>
+                  {h.event}
+                  <p>
+                    {displayTime(h.at)} · {h.by}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {user.role === "System Operator" &&
+              ["New", "Assigned"].includes(c.status) && (
+                <div className="panelbody panel">
+                  <label className="field">
+                    <span>
+                      {c.inspector
+                        ? "Reassign inspector"
+                        : "Assign field inspector"}
+                    </span>
+                    <Pick
+                      value={assignee}
+                      onChange={setAssignee}
+                      options={[
+                        { value: "none", label: "Select an inspector" },
+                        ...users
+                          .filter(
+                            (u) => u.role === "Field Inspector" && u.active,
+                          )
+                          .map((u) => ({ value: u.id, label: u.name })),
+                      ]}
+                      label="Assign inspector"
+                    />
+                  </label>
+                  <Btn
+                    primary
+                    className="full"
+                    style={{ marginTop: 14 }}
+                    disabled={assignee === "none" || assignee === c.inspector}
+                    onClick={() => {
+                      if (assignee === "none") return;
+                      updateCase(c.id, {
+                        inspector: assignee,
+                        status: "Assigned",
+                        history: [
+                          ...c.history,
+                          {
+                            event:
+                              "Assigned to " +
+                              users.find((u) => u.id === assignee)?.name,
+                            at: new Date().toISOString(),
+                            by: user.name,
+                          },
+                        ],
+                      });
+                      toast.success("Inspector assigned");
+                    }}
+                  >
+                    Save assignment <ArrowRight />
+                  </Btn>
+                </div>
+              )}
+            {user.role === "System Operator" &&
+              c.status === "Inspection Submitted" && (
+                <Btn
+                  primary
+                  className="full"
+                  onClick={() => {
+                    updateCase(c.id, {
+                      status: "Closed",
+                      history: [
+                        ...c.history,
+                        {
+                          event: "Case closed after review",
+                          at: new Date().toISOString(),
+                          by: user.name,
+                        },
+                      ],
+                    });
+                    toast.success("Case closed. Inspection outcome retained.");
+                  }}
+                >
+                  <CheckCircle2 />
+                  Close case after review
+                </Btn>
+              )}
+            {user.role === "Field Inspector" &&
+              ["Assigned", "Under Inspection"].includes(c.status) && (
+                <Btn
+                  primary
+                  className="full"
+                  onClick={() => {
+                    onClose();
+                    onMobile();
+                  }}
+                >
+                  <Smartphone />
+                  Continue in field app
+                </Btn>
+              )}
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+function Analysis({
+  enabledModels,
+  findings,
+  setFindings,
+  inspectors,
+  createCase,
+}: {
+  enabledModels: string[];
+  findings: Finding[];
+  setFindings: React.Dispatch<React.SetStateAction<Finding[]>>;
+  inspectors: User[];
+  createCase: (f: Finding, observations: string, inspector: string) => void;
+}) {
+  const [area, setArea] = useState(AREAS[0].name),
+    [capture, setCapture] = useState("2026-09-16"),
+    [models, setModels] = useState(enabledModels),
+    [fileName, setFileName] = useState("Shakiso_Survey-A_sample.jpg"),
+    [preview, setPreview] = useState<string>(),
+    [progress, setProgress] = useState(0),
+    [running, setRunning] = useState(false),
+    [resultSet, setResultSet] = useState<string[]>(
+      findings.slice(0, 3).map((f) => f.id),
+    ),
+    [newCase, setNewCase] = useState<Finding | null>(null),
+    [observation, setObservation] = useState(""),
+    [assignee, setAssignee] = useState("none"),
+    [imageError, setImageError] = useState("");
+  const upload = useRef<HTMLInputElement>(null),
+    timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearInterval(timer.current);
+    },
+    [],
+  );
+  const current = findings.filter((f) => resultSet.includes(f.id));
+  const acceptImage = (file: File | undefined) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setImageError(
+        "For this prototype, upload a JPEG, PNG or WebP preview. GeoTIFF ingestion is represented by the sample imagery flow.",
+      );
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setImageError("Choose a preview image smaller than 20 MB.");
+      return;
+    }
+    setImageError("");
+    setFileName(file.name);
+    setPreview(URL.createObjectURL(file));
+    setResultSet([]);
+    setProgress(0);
+  };
+  const run = () => {
+    if (!models.length || !capture || !fileName || running) return;
+    setProgress(0);
+    setRunning(true);
+    setResultSet([]);
+    let p = 0;
+    timer.current = setInterval(() => {
+      p += 10;
+      setProgress(p);
+      if (p >= 100) {
+        clearInterval(timer.current!);
+        timer.current = null;
+        const a = AREAS.find((a) => a.name === area)!;
+        const stamp = Date.now();
+        const batch: Finding[] = [
+          {
+            title: "Possible excavation footprint",
+            description:
+              "Irregular exposed ground and pit-like features are visible in the highlighted zone. Check activity and permit boundaries on site.",
+            confidence: 94,
+          },
+          {
+            title: "Vegetation clearance near access track",
+            description:
+              "A connected bare-ground pattern may indicate a new access route. Agricultural or construction activity is also possible.",
+            confidence: 87,
+          },
+          {
+            title: "Possible sediment or tailings deposit",
+            description:
+              "A contrasting surface texture may indicate disturbed material. Field evidence is needed to establish the cause.",
+            confidence: 78,
+          },
+        ].map((f, i) => ({
+          ...f,
+          id: `F-${stamp}-${i}`,
+          created: new Date(stamp).toISOString().slice(0, 10),
+          reviewed: false,
+          area: a,
+          capture,
+          models: [...models],
+          image: preview,
+          imageName: fileName,
+        }));
+        setFindings((old) => [...batch, ...old]);
+        setResultSet(batch.map((f) => f.id));
+        setRunning(false);
+        toast.success(
+          "Simulated analysis complete. 3 suspected findings ready for review.",
+        );
+      }
+    }, 320);
+  };
+  return (
+    <>
+      <PageHead
+        title="Imagery & analysis"
+        subtitle="Turn satellite imagery into reviewable findings and field assignments."
+      >
+        <span className="demo-label">
+          <FlaskConical />
+          SIMULATED AI ANALYSIS
+        </span>
+      </PageHead>
+      <div className="analysis-layout">
+        <div className="stack">
+          <section className="panel">
+            <div className="panelhead flexline">
+              <Upload size={18} color="#3b8073" />
+              <h2>1. Prepare imagery</h2>
+            </div>
+            <div className="panelbody">
+              <input
+                ref={upload}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                onChange={(e) => acceptImage(e.target.files?.[0])}
+              />
+              <div
+                className="uploadzone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (!running) acceptImage(e.dataTransfer.files[0]);
+                }}
+              >
+                <Upload />
+                <p>Drop satellite imagery here</p>
+                <small>JPEG, PNG or WebP · up to 20 MB</small>
+                <Btn disabled={running} onClick={() => upload.current?.click()}>
+                  Browse files
+                </Btn>
+              </div>
+              {imageError && (
+                <p className="error" style={{ marginTop: 10 }}>
+                  {imageError}
+                </p>
+              )}
+              <div className="filechip">
+                <FileImage />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div style={{ wordBreak: "break-all" }}>{fileName}</div>
+                  <small className="muted">
+                    {preview
+                      ? "Local preview · session only"
+                      : "Illustrative sample imagery"}
+                  </small>
+                </div>
+                <CheckCircle2 size={17} />
+              </div>
+              <div className="stack" style={{ marginTop: 20, gap: 15 }}>
+                <label className="field">
+                  <span>Mining area / location</span>
+                  <Pick
+                    value={area}
+                    onChange={setArea}
+                    options={AREAS.map((a) => a.name)}
+                    label="Imagery location"
+                  />
+                </label>
+                <label className="field">
+                  <span>Capture date {preview ? "" : "(sample metadata)"}</span>
+                  <input
+                    type="date"
+                    required
+                    value={capture}
+                    max="2026-09-17"
+                    onChange={(e) => setCapture(e.target.value)}
+                  />
+                </label>
+                <div className="small muted">
+                  <MapPin size={13} style={{ display: "inline" }} />{" "}
+                  {AREAS.find((a) => a.name === area)?.lat.toFixed(4)}° N,{" "}
+                  {AREAS.find((a) => a.name === area)?.lng.toFixed(4)}° E
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className="panel">
+            <div className="panelhead flexline">
+              <ScanLine size={18} color="#3b8073" />
+              <h2>2. Select AI models</h2>
+            </div>
+            <div className="panelbody">
+              <p className="subtext" style={{ marginTop: 0 }}>
+                Compare one or more models on the same imagery.
+              </p>
+              <div className="modelchoices">
+                {MODELS.map((m) => (
+                  <label
+                    className={`modelcard ${models.includes(m) ? "checked" : ""}`}
+                    key={m}
+                  >
+                    <Checkbox
+                      disabled={!enabledModels.includes(m) || running}
+                      checked={models.includes(m)}
+                      onCheckedChange={(v) =>
+                        setModels((old) =>
+                          v ? [...old, m] : old.filter((x) => x !== m),
+                        )
+                      }
+                      aria-label={`Use ${m}`}
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
+              {!enabledModels.length && (
+                <p className="error">
+                  An administrator must enable at least one model in Settings.
+                </p>
+              )}
+              <Btn
+                primary
+                className="full"
+                disabled={
+                  running ||
+                  !models.length ||
+                  !capture ||
+                  capture > "2026-09-17"
+                }
+                onClick={run}
+              >
+                {running ? <Loader2 className="animate-spin" /> : <ScanLine />}
+                {running ? "Analyzing imagery…" : "Run simulated analysis"}
+              </Btn>
+              {running && (
+                <div className="progressbox">
+                  <div
+                    className="between small muted"
+                    style={{ marginBottom: 8 }}
+                  >
+                    <span>
+                      {progress < 30
+                        ? "Preparing imagery"
+                        : progress < 80
+                          ? "Comparing model findings"
+                          : "Compiling results"}
+                    </span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              )}
+              <p
+                className="subtext"
+                style={{ fontSize: 12, lineHeight: 1.7, marginTop: 13 }}
+              >
+                This demo returns fixed sample findings. Images are not sent to
+                Qwen, Gemini, or Claude.
+              </p>
+            </div>
+          </section>
+        </div>
+        <div className="stack">
+          <section className="panel">
+            <div className="panelhead between">
+              <div>
+                <h2>Imagery review</h2>
+                <p className="subtext">{current[0]?.area.name || area}</p>
+              </div>
+              <span className="badge outline">
+                <Satellite size={12} />
+                Satellite
+              </span>
+            </div>
+            <MiningMap
+              cases={[]}
+              detail
+              image={current[0]?.image || preview}
+              polygons={!!current.length}
+              running={running}
+            />
+            <div className="maplegend">
+              <span>
+                <i className="legend-dot" />
+                Suspected activity
+              </span>
+              <span>Shakiso sample basemap · fictional overlays</span>
+            </div>
+          </section>
+          <section className="panel">
+            <div className="panelhead between">
+              <h2>3. Review findings</h2>
+              <span className="badge">{current.length} findings</span>
+            </div>
+            <div className="panelbody">
+              {!current.length ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>
+                      {running ? "Analysis in progress" : "Ready when you are"}
+                    </EmptyTitle>
+                    <EmptyDescription>
+                      {running
+                        ? "Reviewable findings will appear here shortly."
+                        : "Choose models and run an analysis to identify areas for review."}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <>
+                  <Note amber>
+                    AI identifies suspected violations. Model scores indicate
+                    simulated visual confidence, not proof of illegal activity.
+                  </Note>
+                  {current.map((f, i) => (
+                    <div
+                      className={`finding ${f.reviewed ? "active" : ""}`}
+                      key={f.id}
+                    >
+                      <div className="between">
+                        <div className="flexline">
+                          <span className="badge amber">{i + 1}</span>
+                          <h3>{f.title}</h3>
+                        </div>
+                        <span className="badge outline">{f.confidence}%</span>
+                      </div>
+                      <p>{f.description}</p>
+                      <div className="flexline wrap">
+                        {f.models.map((m, j) => (
+                          <span className="badge" key={m}>
+                            {m} · {f.confidence - j * 2}%
+                          </span>
+                        ))}
+                        <span className="badge amber">Suspected violation</span>
+                      </div>
+                      <div className="finding-footer between">
+                        <label
+                          className="flexline small"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked={f.reviewed}
+                            disabled={!!f.caseId}
+                            onCheckedChange={(v) =>
+                              setFindings((old) =>
+                                old.map((x) =>
+                                  x.id === f.id ? { ...x, reviewed: !!v } : x,
+                                ),
+                              )
+                            }
+                            aria-label={`Mark finding ${i + 1} reviewed`}
+                          />
+                          Reviewed by operator
+                        </label>
+                        {f.caseId ? (
+                          <span className="caseid">{f.caseId}</span>
+                        ) : (
+                          <Btn
+                            primary
+                            disabled={!f.reviewed}
+                            onClick={() => {
+                              setNewCase(f);
+                              setObservation(f.description);
+                              setAssignee("none");
+                            }}
+                          >
+                            <Plus />
+                            Create case
+                          </Btn>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+      <Dialog
+        open={!!newCase}
+        onOpenChange={(v) => {
+          if (!v) setNewCase(null);
+        }}
+      >
+        <DialogContent style={{ background: "#fff" }}>
+          <DialogHeader>
+            <DialogTitle>Create investigation case</DialogTitle>
+            <DialogDescription>
+              The reviewed finding and imagery will be linked to a unique Case
+              ID.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="badge amber">AI suspected violation</div>
+          <h3>{newCase?.title}</h3>
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newCase || !observation.trim()) return;
+              createCase(
+                newCase,
+                observation.trim(),
+                assignee === "none" ? "" : assignee,
+              );
+              setNewCase(null);
+            }}
+          >
+            <label className="field">
+              <span>Operator observations</span>
+              <textarea
+                value={observation}
+                onChange={(e) => setObservation(e.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Field inspector</span>
+              <Pick
+                value={assignee}
+                onChange={setAssignee}
+                options={[
+                  { value: "none", label: "Leave unassigned — New case" },
+                  ...inspectors.map((u) => ({ value: u.id, label: u.name })),
+                ]}
+                label="Assign new case to inspector"
+              />
+            </label>
+            <div className="filechip">
+              <FileImage />
+              <div>
+                {newCase?.imageName}
+                <small className="muted" style={{ display: "block" }}>
+                  Imagery, capture date, models and finding attached
+                </small>
+              </div>
+            </div>
+            <Btn primary type="submit">
+              {assignee === "none" ? "Create new case" : "Create & assign case"}
+              <ArrowRight />
+            </Btn>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+function Reports({
+  cases,
+  pending,
+  users,
+  onSelect,
+}: {
+  cases: MiningCase[];
+  pending: Finding[];
+  users: User[];
+  onSelect: (c: MiningCase) => void;
+}) {
+  const [region, setRegion] = useState("All locations"),
+    [start, setStart] = useState("2026-09-01"),
+    [end, setEnd] = useState("2026-09-30"),
+    [inspector, setInspector] = useState("All inspectors"),
+    [model, setModel] = useState("All models"),
+    [busy, setBusy] = useState(false);
+  const filtered = cases.filter(
+    (c) =>
+      (region === "All locations" || c.region === region) &&
+      (!start || c.created >= start) &&
+      (!end || c.created <= end) &&
+      (inspector === "All inspectors" || c.inspector === inspector) &&
+      (model === "All models" || c.models.includes(model)),
+  );
+  const inspected = filtered.filter((c) => c.inspection);
+  const unlinked = pending.filter(
+    (f) =>
+      inspector === "All inspectors" &&
+      (region === "All locations" || f.area.region === region) &&
+      (!start || f.created >= start) &&
+      (!end || f.created <= end) &&
+      (model === "All models" || f.models.includes(model)),
+  );
+  const totalFindings =
+    filtered.reduce((s, c) => s + c.detections, 0) + unlinked.length;
+  const reportRows = () =>
+    filtered.map((c) => ({
+      "Case ID": c.id,
+      "Mining area": c.area,
+      Location: c.region,
+      Created: c.created,
+      "AI suspected findings": c.detections,
+      "Assigned inspector":
+        users.find((u) => u.id === c.inspector)?.name || "Unassigned",
+      Status: c.status,
+      "Inspection outcome": c.inspection?.outcome || "Not inspected",
+      "AI models": c.models.join(", "),
+      "Submitted at": c.inspection ? displayTime(c.inspection.at) : "",
+      "GPS coordinates": c.inspection
+        ? `${c.inspection.lat}, ${c.inspection.lng}`
+        : "",
+      "GPS source": c.inspection?.source || "",
+    }));
+  const exportReport = async (kind: "pdf" | "excel") => {
+    setBusy(true);
+    try {
+      if (kind === "excel") {
+        const XLSX = await import("xlsx");
+        const wb = XLSX.utils.book_new();
+        const summary = [
+          ["Project Lalibela — SAMPLE DATA"],
+          [
+            "Filters",
+            `${start} to ${end}; ${region}; ${inspector === "All inspectors" ? inspector : users.find((u) => u.id === inspector)?.name}; ${model}`,
+          ],
+          ["Date basis", "Case creation date"],
+          ["AI suspected findings", totalFindings],
+          ["Findings awaiting a case", unlinked.length],
+          ["Cases created", filtered.length],
+          [
+            "Mining areas inspected",
+            new Set(inspected.map((c) => c.area)).size,
+          ],
+          [],
+          ["Case status", "Count"],
+          ...STATUSES.map((s) => [
+            s,
+            filtered.filter((c) => c.status === s).length,
+          ]),
+          [],
+          ["Inspection outcome", "Count"],
+          ...OUTCOMES.map((s) => [
+            s,
+            inspected.filter((c) => c.inspection?.outcome === s).length,
+          ]),
+        ];
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet(summary),
+          "Summary",
+        );
+        const ws = XLSX.utils.json_to_sheet(reportRows());
+        ws["!cols"] = Array(12).fill({ wch: 27 });
+        XLSX.utils.book_append_sheet(wb, ws, "Cases");
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.json_to_sheet(
+            unlinked.map((f) => ({
+              Finding: f.title,
+              Location: f.area.name,
+              Created: f.created,
+              Models: f.models.join(", "),
+              Status: "Suspected violation - awaiting case",
+            })),
+          ),
+          "Unlinked findings",
+        );
+        XLSX.writeFile(wb, "Lalibela_Mining_Report_SAMPLE.xlsx");
+      } else {
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF();
+        let y = 23;
+        pdf.setFillColor(18, 39, 51);
+        pdf.rect(0, 0, 210, 42, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(22);
+        pdf.text("PROJECT LALIBELA", 16, y);
+        pdf.setFontSize(10);
+        pdf.text("MINING MONITORING REPORT | SAMPLE DATA", 16, y + 10);
+        pdf.setTextColor(40, 60, 70);
+        y = 54;
+        pdf.setFontSize(10);
+        pdf.text(`${start} to ${end} | ${region} | ${model}`, 16, y);
+        y += 7;
+        pdf.text(
+          `Inspector: ${inspector === "All inspectors" ? inspector : users.find((u) => u.id === inspector)?.name} | Date basis: case creation`,
+          16,
+          y,
+        );
+        y += 12;
+        pdf.setFontSize(12);
+        pdf.text(
+          `${filtered.length} cases | ${totalFindings} AI suspected findings (${unlinked.length} awaiting case)`,
+          16,
+          y,
+        );
+        y += 9;
+        pdf.text(
+          `${new Set(inspected.map((c) => c.area)).size} mining areas inspected | ${inspected.length} inspections submitted`,
+          16,
+          y,
+        );
+        y += 14;
+        pdf.setFontSize(10);
+        for (const s of STATUSES) {
+          pdf.text(
+            `${s}: ${filtered.filter((c) => c.status === s).length}`,
+            16,
+            y,
+          );
+          y += 7;
+        }
+        y += 7;
+        for (const s of OUTCOMES) {
+          pdf.text(
+            `${s.replace(" — ", " - ")}: ${inspected.filter((c) => c.inspection?.outcome === s).length}`,
+            16,
+            y,
+          );
+          y += 7;
+        }
+        y += 14;
+        for (const c of filtered) {
+          if (y > 244) {
+            pdf.addPage();
+            y = 22;
+          }
+          pdf.setFont("helvetica", "bold");
+          pdf.text(`${c.id} | ${c.area.replace(" · ", " / ")}`, 16, y);
+          y += 7;
+          pdf.setFont("helvetica", "normal");
+          pdf.text(
+            `${c.status} | ${users.find((u) => u.id === c.inspector)?.name || "Unassigned"} | ${c.models.join(", ")}`,
+            16,
+            y,
+          );
+          y += 7;
+          pdf.text(
+            `Outcome: ${(c.inspection?.outcome || "Not inspected").replace(" — ", " - ")}`,
+            16,
+            y,
+          );
+          y += 12;
+        }
+        const count = pdf.getNumberOfPages();
+        for (let p = 1; p <= count; p++) {
+          pdf.setPage(p);
+          pdf.setFontSize(8);
+          pdf.setTextColor(110, 125, 130);
+          pdf.text(
+            "Fictional investigations. AI findings are suspected violations until verified.",
+            16,
+            282,
+          );
+          pdf.text(`${p} / ${count}`, 183, 282);
+        }
+        pdf.save("Lalibela_Mining_Report_SAMPLE.pdf");
+      }
+      toast.success(`${kind === "pdf" ? "PDF" : "Excel"} report exported`);
+    } catch {
+      toast.error("The report could not be exported. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <PageHead
+        title="Reports & outcomes"
+        subtitle="Understand the investigation pipeline and what field inspections found."
+      >
+        <Btn disabled={busy} onClick={() => exportReport("pdf")}>
+          <FileText />
+          Export PDF
+        </Btn>
+        <Btn primary disabled={busy} onClick={() => exportReport("excel")}>
+          <Download />
+          Export Excel
+        </Btn>
+      </PageHead>
+      <FilterBar
+        {...{ region, setRegion, start, setStart, end, setEnd }}
+        onReset={() => {
+          setInspector("All inspectors");
+          setModel("All models");
+        }}
+      >
+        <label className="field">
+          <span>Inspector</span>
+          <Pick
+            value={inspector}
+            onChange={setInspector}
+            options={[
+              "All inspectors",
+              ...users
+                .filter((u) => u.role === "Field Inspector")
+                .map((u) => ({ value: u.id, label: u.name })),
+            ]}
+            label="Filter inspector"
+          />
+        </label>
+        <label className="field">
+          <span>AI model</span>
+          <Pick
+            value={model}
+            onChange={setModel}
+            options={["All models", ...MODELS]}
+            label="Filter AI model"
+          />
+        </label>
+      </FilterBar>
+      <p className="small muted" style={{ margin: "-7px 0 20px" }}>
+        Date range applies to case creation and analysis dates. All summaries
+        and exports reflect the current filters.
+      </p>
+      <Stats cases={filtered} extra={unlinked.length} />
+      <div className="reportgrid">
+        <section className="panel">
+          <div className="panelhead">
+            <h2>Cases by status</h2>
+          </div>
+          <div className="panelbody">
+            {STATUSES.map((s, i) => (
+              <div className="outcome-row" key={s}>
+                <span>{s}</span>
+                <div className="tinybar">
+                  <span
+                    style={{
+                      background: STATUS_COLORS[i],
+                      width: `${filtered.length ? (filtered.filter((c) => c.status === s).length / filtered.length) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <strong>{filtered.filter((c) => c.status === s).length}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panelhead">
+            <h2>Inspection outcomes</h2>
+          </div>
+          <div className="panelbody">
+            <div className="between" style={{ marginBottom: 14 }}>
+              <div>
+                <div className="statvalue" style={{ fontSize: 30 }}>
+                  {new Set(inspected.map((c) => c.area)).size}
+                </div>
+                <span className="small muted">Mining areas inspected</span>
+              </div>
+              <ShieldCheck size={36} color="#8cb4a5" />
+            </div>
+            {OUTCOMES.map((s, i) => (
+              <div className="outcome-row" key={s}>
+                <span style={{ fontSize: 13 }}>{s}</span>
+                <div className="tinybar">
+                  <span
+                    style={{
+                      background: ["#b7776c", "#57917b", "#d1ab64"][i],
+                      width: `${inspected.length ? (inspected.filter((c) => c.inspection?.outcome === s).length / inspected.length) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <strong>
+                  {inspected.filter((c) => c.inspection?.outcome === s).length}
+                </strong>
+              </div>
+            ))}
+            <p className="subtext" style={{ fontSize: 12, marginTop: 12 }}>
+              Outcome describes the finding. Status describes the case workflow.
+            </p>
+          </div>
+        </section>
+      </div>
+      <CaseTable
+        cases={filtered}
+        users={users}
+        onSelect={onSelect}
+        caption="Report case details"
+      />
+    </>
+  );
+}
+
+function UserManagement({
+  users,
+  setUsers,
+  current,
+}: {
+  users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  current: string;
+}) {
+  const [editor, setEditor] = useState<User | null>(null),
+    [open, setOpen] = useState(false),
+    [error, setError] = useState(""),
+    [search, setSearch] = useState("");
+  const filtered = users.filter((u) =>
+    (u.name + u.email + u.role).toLowerCase().includes(search.toLowerCase()),
+  );
+  const begin = (u?: User) => {
+    setEditor(
+      u
+        ? { ...u }
+        : {
+            id: "",
+            name: "",
+            email: "",
+            role: "Dashboard Viewer",
+            active: true,
+          },
+    );
+    setError("");
+    setOpen(true);
+  };
+  const save = () => {
+    if (!editor) return;
+    const clean = {
+      ...editor,
+      name: editor.name.trim(),
+      email: editor.email.trim().toLowerCase(),
+    };
+    if (!clean.name || !clean.email)
+      return setError("Enter a name and email address.");
+    if (
+      users.some(
+        (u) => u.email.toLowerCase() === clean.email && u.id !== clean.id,
+      )
+    )
+      return setError("A user with this email already exists.");
+    if (
+      clean.id === current &&
+      (!clean.active || clean.role !== "Administrator")
+    )
+      return setError(
+        "Keep your current administrator account active with its administrator role.",
+      );
+    setUsers((old) =>
+      clean.id
+        ? old.map((u) => (u.id === clean.id ? clean : u))
+        : [...old, { ...clean, id: `u-${Date.now()}` }],
+    );
+    setOpen(false);
+    toast.success(
+      clean.id ? "User updated" : "User created. Demo password: Lalibela2026!",
+    );
+  };
+  return (
+    <>
+      <PageHead
+        title="Users & roles"
+        subtitle="Manage who can view, investigate, and administer Project Lalibela."
+      >
+        <Btn primary onClick={() => begin()}>
+          <Plus />
+          Create user
+        </Btn>
+      </PageHead>
+      <div className="statgrid">
+        {ROLES.map((r) => (
+          <div className="panel stat" key={r}>
+            <span className="muted" style={{ fontSize: 13 }}>
+              {r}
+            </span>
+            <div className="statvalue" style={{ fontSize: 29 }}>
+              {users.filter((u) => u.role === r && u.active).length}
+            </div>
+            <span className="statfoot">Active users</span>
+          </div>
+        ))}
+      </div>
+      <input
+        className="input"
+        aria-label="Search users"
+        style={{ maxWidth: 340, marginBottom: 20 }}
+        placeholder="Search by name, email, or role…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <div className="panel casestable" style={{ marginTop: 0 }}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Access</TableHead>
+              <TableHead>Manage</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((u) => (
+              <TableRow key={u.id} style={{ cursor: "default" }}>
+                <TableCell>
+                  <div className="flexline">
+                    <span className="avatar">{initials(u.name)}</span>
+                    <div>
+                      {u.name}
+                      <small className="muted" style={{ display: "block" }}>
+                        {u.email}
+                      </small>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>{u.role}</TableCell>
+                <TableCell>
+                  <label className="flexline">
+                    <Switch
+                      checked={u.active}
+                      disabled={u.id === current}
+                      aria-label={`${u.active ? "Deactivate" : "Activate"} ${u.name}`}
+                      onCheckedChange={(v) => {
+                        setUsers((old) =>
+                          old.map((x) =>
+                            x.id === u.id ? { ...x, active: v } : x,
+                          ),
+                        );
+                        toast.success(
+                          `${u.name} ${v ? "activated" : "deactivated"}`,
+                        );
+                      }}
+                    />
+                    <span className={`badge ${u.active ? "green" : ""}`}>
+                      {u.active ? "Active" : "Inactive"}
+                    </span>
+                  </label>
+                </TableCell>
+                <TableCell>
+                  <button className="textbtn" onClick={() => begin(u)}>
+                    Edit user <ChevronRight />
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!filtered.length && (
+              <TableRow>
+                <TableCell colSpan={4} className="table-empty">
+                  No users match your search.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div style={{ marginTop: 24 }}>
+        <Note>
+          Role permissions are demonstrated within this prototype. Account
+          changes and case updates last for this session only.
+        </Note>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent style={{ background: "#fff" }}>
+          <DialogHeader>
+            <DialogTitle>
+              {editor?.id ? "Edit user" : "Create user"}
+            </DialogTitle>
+            <DialogDescription>
+              Set the person’s access to the mining monitoring workspace.
+            </DialogDescription>
+          </DialogHeader>
+          {editor && (
+            <form
+              className="stack"
+              onSubmit={(e) => {
+                e.preventDefault();
+                save();
+              }}
+            >
+              <label className="field">
+                <span>Full name</span>
+                <input
+                  required
+                  value={editor.name}
+                  onChange={(e) =>
+                    setEditor({ ...editor, name: e.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Email address</span>
+                <input
+                  required
+                  type="email"
+                  value={editor.email}
+                  onChange={(e) =>
+                    setEditor({ ...editor, email: e.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Role</span>
+                <Pick
+                  value={editor.role}
+                  onChange={(v) => setEditor({ ...editor, role: v as Role })}
+                  options={ROLES}
+                  label="User role"
+                />
+              </label>
+              <label className="flexline small">
+                <Switch
+                  checked={editor.active}
+                  onCheckedChange={(v) => setEditor({ ...editor, active: v })}
+                />
+                Active user
+              </label>
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              <p className="small muted">
+                Demo password for all sample accounts: Lalibela2026!
+              </p>
+              <Btn primary type="submit">
+                {editor.id ? "Save changes" : "Create user"}
+                <Check />
+              </Btn>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+function SettingsView({
+  threshold,
+  setThreshold,
+  enabledModels,
+  setEnabledModels,
+  onUsers,
+}: {
+  threshold: number;
+  setThreshold: (n: number) => void;
+  enabledModels: string[];
+  setEnabledModels: (s: string[]) => void;
+  onUsers: () => void;
+}) {
+  const [tab, setTab] = useState("gps"),
+    [radius, setRadius] = useState(String(threshold)),
+    [modelDraft, setModelDraft] = useState(enabledModels),
+    [error, setError] = useState("");
+  return (
+    <>
+      <PageHead
+        title="Workspace settings"
+        subtitle="Configure the controls used across analysis and field inspections."
+      >
+        <span className="badge outline">
+          <LockKeyhole size={12} />
+          Administrator only
+        </span>
+      </PageHead>
+      <div className="settings-layout">
+        <nav className="setting-nav">
+          <button
+            className={tab === "gps" ? "active" : ""}
+            onClick={() => setTab("gps")}
+          >
+            <Crosshair />
+            Field GPS verification
+          </button>
+          <button
+            className={tab === "models" ? "active" : ""}
+            onClick={() => setTab("models")}
+          >
+            <ScanLine />
+            AI configuration
+          </button>
+          <button
+            className={tab === "roles" ? "active" : ""}
+            onClick={() => setTab("roles")}
+          >
+            <Users />
+            Users & permissions
+          </button>
+        </nav>
+        <div className="settings-section">
+          {tab === "gps" && (
+            <section className="panel">
+              <div className="panelhead">
+                <h2>On-site proximity threshold</h2>
+                <p className="subtext">
+                  Control when inspectors can start and submit an on-site
+                  update.
+                </p>
+              </div>
+              <form
+                className="panelbody stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const n = Number(radius);
+                  if (!Number.isInteger(n) || n < 25 || n > 1000)
+                    return setError(
+                      "Enter a whole number from 25 to 1,000 metres.",
+                    );
+                  setThreshold(n);
+                  setError("");
+                  toast.success(`GPS threshold saved: ${n} metres`);
+                }}
+              >
+                <div className="note">
+                  <Crosshair />
+                  <div>
+                    <strong>Current threshold: {threshold} metres</strong>
+                    <p>
+                      Inspectors can see all assigned cases. Only on-site
+                      updates require a verified location.
+                    </p>
+                  </div>
+                </div>
+                <label className="field" style={{ maxWidth: 260 }}>
+                  <span>Maximum distance from assigned location</span>
+                  <div className="flexline">
+                    <input
+                      type="number"
+                      min={25}
+                      max={1000}
+                      step={1}
+                      value={radius}
+                      onChange={(e) => setRadius(e.target.value)}
+                      required
+                    />
+                    <span className="muted">metres</span>
+                  </div>
+                </label>
+                {error && <p className="error">{error}</p>}
+                <p className="subtext" style={{ lineHeight: 1.8 }}>
+                  Location must be recent (within two minutes), and the measured
+                  distance plus reported GPS accuracy must fit within this
+                  radius. Failed or unavailable location verification keeps
+                  submission disabled.
+                </p>
+                <div>
+                  <Btn primary type="submit">
+                    Save GPS setting <Check />
+                  </Btn>
+                </div>
+              </form>
+            </section>
+          )}
+          {tab === "models" && (
+            <section className="panel">
+              <div className="panelhead">
+                <h2>AI model configuration</h2>
+                <p className="subtext">
+                  Choose which models operators can select.
+                </p>
+              </div>
+              <div className="panelbody">
+                {MODELS.map((m) => (
+                  <div className="model-setting" key={m}>
+                    <div className="flexline">
+                      <span className={`model-icon ${m}`}>{m[0]}</span>
+                      <div>
+                        <h3>{m}</h3>
+                        <p>
+                          {m === "Qwen"
+                            ? "Vision-language analysis"
+                            : m === "Gemini"
+                              ? "Multimodal image review"
+                              : "Visual reasoning and comparison"}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={modelDraft.includes(m)}
+                      onCheckedChange={(v) =>
+                        setModelDraft((old) =>
+                          v ? [...old, m] : old.filter((x) => x !== m),
+                        )
+                      }
+                      aria-label={`Enable ${m}`}
+                    />
+                  </div>
+                ))}
+                <div style={{ marginTop: 20 }}>
+                  <Note>
+                    All three models use simulated responses in this prototype.
+                    No API keys or external model connections are required.
+                  </Note>
+                </div>
+                <Btn
+                  primary
+                  style={{ marginTop: 23 }}
+                  onClick={() => {
+                    setEnabledModels(modelDraft);
+                    toast.success("AI model configuration saved");
+                  }}
+                >
+                  Save model settings <Check />
+                </Btn>
+              </div>
+            </section>
+          )}
+          {tab === "roles" && (
+            <section className="panel">
+              <div className="panelhead">
+                <h2>Users & permissions</h2>
+                <p className="subtext">Each role has a defined workspace.</p>
+              </div>
+              <div className="panelbody">
+                <Table className="role-table">
+                  <TableBody>
+                    {[
+                      [
+                        ROLES[0],
+                        "Manage users, role assignments, AI configuration and GPS settings.",
+                      ],
+                      [
+                        ROLES[1],
+                        "View dashboards, case details, maps and reports. Read-only.",
+                      ],
+                      [
+                        ROLES[2],
+                        "Upload imagery, run analysis, review findings, create cases, assign inspectors and close reviewed cases.",
+                      ],
+                      [
+                        ROLES[3],
+                        "View own assignments and submit verified on-site inspection updates.",
+                      ],
+                    ].map(([r, d]) => (
+                      <TableRow key={r}>
+                        <TableCell>{r}</TableCell>
+                        <TableCell>{d}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Btn primary style={{ marginTop: 24 }} onClick={onUsers}>
+                  <Users />
+                  Manage users
+                </Btn>
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+function MobileApp({
+  user,
+  users,
+  onLogin,
+  cases,
+  threshold,
+  updateCase,
+  onExit,
+  initialCaseId,
+}: {
+  initialCaseId?: string | null;
+  user: User | null;
+  users: User[];
+  onLogin: (u: User) => void;
+  cases: MiningCase[];
+  threshold: number;
+  updateCase: (id: string, v: Partial<MiningCase>) => void;
+  onExit: () => void;
+}) {
+  type Screen = "cases" | "details" | "map" | "gps" | "form" | "success";
+  const [screen, setScreen] = useState<Screen>(
+      initialCaseId ? "details" : "cases",
+    ),
+    [selected, setSelected] = useState<string | null>(initialCaseId || null),
+    [gps, setGps] = useState<Gps | null>(null),
+    [gpsError, setGpsError] = useState(""),
+    [locating, setLocating] = useState(false),
+    [clock, setClock] = useState(Date.now()),
+    [observations, setObservations] = useState(""),
+    [outcome, setOutcome] = useState("none"),
+    [photos, setPhotos] = useState<string[]>([]),
+    [photoBusy, setPhotoBusy] = useState(false),
+    [formError, setFormError] = useState(""),
+    [filter, setFilter] = useState("all"),
+    [uid, setUid] = useState("u4"),
+    [password, setPassword] = useState("Lalibela2026!"),
+    [loginError, setLoginError] = useState("");
+  const photoInput = useRef<HTMLInputElement>(null),
+    submitLock = useRef(false);
+  const c = cases.find((c) => c.id === selected) || cases[0];
+  useEffect(() => {
+    const t = setInterval(() => setClock(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, []);
+  const fresh = !!gps && clock - gps.at < 120000;
+  const distance = gps && c ? distanceMeters(gps, c) : null;
+  const verified = isLocationVerified(gps, c, threshold, clock);
+  const actionable = !!c && ["Assigned", "Under Inspection"].includes(c.status);
+  const activeStep = !user
+    ? 0
+    : { cases: 1, details: 2, map: 3, gps: 4, form: 5, success: 6 }[screen];
+  const ordered = [...cases].sort((a, b) =>
+    gps ? distanceMeters(gps, a) - distanceMeters(gps, b) : 0,
+  );
+  const visible =
+    filter === "all"
+      ? ordered
+      : ordered.filter(
+          (c) => c.status !== "Closed" && c.status !== "Inspection Submitted",
+        );
+  const selectCase = (item: MiningCase) => {
+    if (selected !== item.id) {
+      setPhotos([]);
+      setObservations("");
+      setOutcome("none");
+    }
+    setSelected(item.id);
+    setScreen("details");
+    setFormError("");
+    submitLock.current = false;
+  };
+  const locate = () => {
+    setGpsError("");
+    setGps(null);
+    setLocating(true);
+    if (!navigator.geolocation) {
+      setGpsError("Location is unavailable on this device.");
+      setLocating(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setGps({
+          lat: p.coords.latitude,
+          lng: p.coords.longitude,
+          accuracy: p.coords.accuracy,
+          at: p.timestamp,
+          source: "Device GPS",
+        });
+        setClock(Date.now());
+        setLocating(false);
+      },
+      (e) => {
+        setGpsError(
+          e.code === 1
+            ? "Location permission was denied. Enable location access to verify your visit."
+            : e.code === 3
+              ? "GPS timed out. Move to an open area and try again."
+              : "A reliable GPS position could not be obtained. Try again.",
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+    );
+  };
+  const simulate = (near: boolean) => {
+    if (!c) return;
+    setGps({
+      lat: c.lat + (near ? 0.00006 : 0.02),
+      lng: c.lng,
+      accuracy: 5,
+      at: Date.now(),
+      source: "Simulated GPS",
+    });
+    setClock(Date.now());
+    setGpsError("");
+  };
+  const addPhotos = async (files: FileList | null) => {
+    if (!files) return;
+    const list = Array.from(files);
+    if (photos.length + list.length > 6) {
+      setFormError("Attach up to six photographs.");
+      return;
+    }
+    if (
+      list.some(
+        (f) =>
+          !["image/jpeg", "image/png", "image/webp"].includes(f.type) ||
+          f.size > 10 * 1024 * 1024,
+      )
+    ) {
+      setFormError("Use JPEG, PNG or WebP photographs, each under 10 MB.");
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      const urls = await Promise.all(
+        list.map(
+          (f) =>
+            new Promise<string>((resolve, reject) => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result as string);
+              r.onerror = reject;
+              r.readAsDataURL(f);
+            }),
+        ),
+      );
+      setPhotos((old) => [...old, ...urls]);
+      setFormError("");
+    } catch {
+      setFormError("A photograph could not be read. Try another image.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const beginInspection = () => {
+    if (!c || !user || !verified || !actionable) return;
+    if (c.status === "Assigned")
+      updateCase(c.id, {
+        status: "Under Inspection",
+        history: [
+          ...c.history,
+          {
+            event: "On-site inspection started",
+            at: new Date().toISOString(),
+            by: user.name,
+          },
+        ],
+      });
+    setScreen("form");
+  };
+  const submit = () => {
+    if (!c || !user || submitLock.current) return;
+    if (!gps || !isLocationVerified(gps, c, threshold)) {
+      setFormError("Verify your on-site location again before submitting.");
+      return;
+    }
+    if (c.inspector !== user.id || c.status !== "Under Inspection")
+      return setFormError(
+        "This case is not available for an inspection update.",
+      );
+    if (!observations.trim() || outcome === "none")
+      return setFormError("Add observations and select an inspection outcome.");
+    submitLock.current = true;
+    const at = new Date().toISOString();
+    const inspection: Inspection = {
+      outcome,
+      observations: observations.trim(),
+      photos,
+      lat: gps.lat,
+      lng: gps.lng,
+      accuracy: gps.accuracy,
+      distance: distanceMeters(gps, c),
+      threshold,
+      at,
+      source: gps.source,
+    };
+    updateCase(c.id, {
+      status: "Inspection Submitted",
+      inspection,
+      history: [
+        ...c.history,
+        { event: "Inspection submitted", at, by: user.name },
+      ],
+    });
+    setScreen("success");
+    toast.success(`Inspection submitted for ${c.id}`);
+  };
+  const gpsCard = (
+    <div className={`gpscard ${verified ? "verified" : ""}`} role="status">
+      {verified ? <ShieldCheck /> : <Crosshair />}
+      <h3>
+        {locating
+          ? "Checking your location…"
+          : verified
+            ? "Location verified"
+            : gps
+              ? fresh
+                ? "Outside verification radius"
+                : "Location check expired"
+              : "Verify your location"}
+      </h3>
+      <p>
+        {verified
+          ? `You are ${Math.round(distance || 0)} m from the assigned location.`
+          : gps && !fresh
+            ? "Refresh your location to continue."
+            : gps
+              ? `You are ${Math.round(distance || 0).toLocaleString()} m away (±${Math.round(gps.accuracy)} m).`
+              : `Get within ${threshold} m of the assigned location to enable on-site updates.`}
+      </p>
+      {gps && (
+        <div className="gps-meta">
+          <div>
+            Coordinates
+            <strong>
+              {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
+            </strong>
+          </div>
+          <div>
+            Accuracy / threshold
+            <strong>
+              ±{Math.round(gps.accuracy)} m / {threshold} m
+            </strong>
+          </div>
+          <div>
+            Source<strong>{gps.source}</strong>
+          </div>
+          <div>
+            Location checked
+            <strong>{displayTime(new Date(gps.at).toISOString())}</strong>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <>
+      <PageHead
+        title="Field inspector app"
+        subtitle="Take the investigation from the map to the ground."
+      >
+        <span className="demo-label">
+          <Smartphone />
+          MOBILE PROTOTYPE
+        </span>
+      </PageHead>
+      <div className="mobile-stage">
+        <aside className="mobile-side">
+          <div
+            className="eyebrow"
+            style={{ color: "#56847b", marginBottom: 18 }}
+          >
+            FIELD WORKFLOW
+          </div>
+          <h2>
+            Every visit.
+            <br />A verifiable record.
+          </h2>
+          <p>
+            Follow an assigned case through location verification, observations,
+            and submission.
+          </p>
+          <div className="mobile-steps">
+            {[
+              "Inspector login",
+              "Assigned cases",
+              "Case details",
+              "Map & navigation",
+              "GPS verification",
+              "Inspection update",
+              "Submission confirmation",
+            ].map((s, i) => (
+              <div
+                key={s}
+                className={`mobile-step ${i === activeStep ? "active" : ""}`}
+              >
+                <strong>{i < activeStep ? <Check size={12} /> : i + 1}</strong>
+                {s}
+              </div>
+            ))}
+          </div>
+        </aside>
+        <div>
+          <div className="phone">
+            <div className="phonestatus">
+              <span>9:41</span>
+              <span className="flexline" style={{ gap: 4 }}>
+                <Signal />
+                <Wifi />
+                <BatteryFull />
+              </span>
+            </div>
+            {user && (
+              <header className="phoneheader">
+                {screen === "cases" ? (
+                  <Brand />
+                ) : (
+                  <>
+                    <button
+                      aria-label="Back to assigned cases"
+                      onClick={() =>
+                        setScreen(screen === "form" ? "gps" : "cases")
+                      }
+                    >
+                      <ChevronLeft size={21} />
+                    </button>
+                    <div className="grow">
+                      <h3 style={{ fontSize: 15 }}>
+                        {screen === "success"
+                          ? "Inspection submitted"
+                          : screen === "form"
+                            ? "Inspection update"
+                            : screen === "gps"
+                              ? "Location verification"
+                              : screen === "map"
+                                ? "Map & navigation"
+                                : "Case details"}
+                      </h3>
+                      <span className="caseid" style={{ fontSize: 11 }}>
+                        {c?.id}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {screen === "cases" && (
+                  <span className="avatar" style={{ marginLeft: "auto" }}>
+                    {initials(user.name)}
+                  </span>
+                )}
+              </header>
+            )}
+            <div className="phonecontent">
+              {!user ? (
+                <div className="phone-login">
+                  <Brand />
+                  <h1>Ready for the field?</h1>
+                  <p className="subtext">
+                    Sign in to view your assigned inspections.
+                  </p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const u = users.find(
+                        (u) => u.id === uid && u.role === "Field Inspector",
+                      );
+                      if (!u?.active || password !== "Lalibela2026!")
+                        return setLoginError(
+                          "Choose an active sample inspector and use Lalibela2026!",
+                        );
+                      onLogin(u);
+                    }}
+                  >
+                    <label className="field">
+                      <span>Sample inspector</span>
+                      <Pick
+                        value={uid}
+                        onChange={setUid}
+                        options={users
+                          .filter((u) => u.role === "Field Inspector")
+                          .map((u) => ({ value: u.id, label: u.name }))}
+                        label="Mobile inspector account"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Email</span>
+                      <input
+                        readOnly
+                        type="email"
+                        value={users.find((u) => u.id === uid)?.email || ""}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Password</span>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </label>
+                    {loginError && (
+                      <p className="error" style={{ marginTop: 12 }}>
+                        {loginError}
+                      </p>
+                    )}
+                    <Btn
+                      primary
+                      type="submit"
+                      className="full"
+                      style={{ marginTop: 25 }}
+                    >
+                      Sign in <ArrowRight />
+                    </Btn>
+                  </form>
+                  <div style={{ marginTop: 25 }}>
+                    <Note>
+                      Demo accounts only. Sample credentials are prefilled.
+                    </Note>
+                  </div>
+                </div>
+              ) : screen === "cases" ? (
+                <>
+                  <div
+                    className="eyebrow muted"
+                    style={{ fontSize: 10, marginBottom: 6 }}
+                  >
+                    HELLO, {user.name.split(" ")[0].toUpperCase()}
+                  </div>
+                  <div className="between">
+                    <h1>My assignments</h1>
+                    <span className="badge green">{cases.length}</span>
+                  </div>
+                  <p className="subtext">All your cases, in one place.</p>
+                  <div className="flexline" style={{ margin: "17px 0" }}>
+                    <Tabs value={filter} onValueChange={setFilter}>
+                      <TabsList>
+                        <TabsTrigger value="all">All cases</TabsTrigger>
+                        <TabsTrigger value="active">
+                          Needs inspection
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                    <button
+                      className="btn iconbtn"
+                      aria-label="View assigned cases on map"
+                      onClick={() => setScreen("map")}
+                    >
+                      <MapIcon size={17} />
+                    </button>
+                  </div>
+                  <div className="note" style={{ fontSize: 12 }}>
+                    <Navigation />
+                    {gps && fresh
+                      ? `${gps.source} active. Nearby cases are highlighted.`
+                      : "All assignments are visible. Check GPS to highlight nearby cases."}
+                  </div>
+                  {visible.map((item) => {
+                    const d = gps ? distanceMeters(gps, item) : null;
+                    const near = isLocationVerified(
+                      gps,
+                      item,
+                      threshold,
+                      clock,
+                    );
+                    return (
+                      <button
+                        className={`case-card full ${near ? "nearby" : ""}`}
+                        style={{ textAlign: "left" }}
+                        key={item.id}
+                        onClick={() => selectCase(item)}
+                      >
+                        <div className="between">
+                          <span className="caseid" style={{ fontSize: 12 }}>
+                            {item.id}
+                          </span>
+                          <span
+                            className={`badge ${item.priority === "High" ? "amber" : "outline"}`}
+                          >
+                            {item.priority}
+                          </span>
+                        </div>
+                        <h3>{item.area}</h3>
+                        <div className="muted">
+                          <MapPin size={12} style={{ display: "inline" }} />{" "}
+                          {item.region} ·{" "}
+                          {d === null
+                            ? "Distance unavailable"
+                            : d < 1000
+                              ? `${Math.round(d)} m away`
+                              : `${(d / 1000).toFixed(1)} km away`}
+                        </div>
+                        <div className="between" style={{ marginTop: 16 }}>
+                          <StatusBadge status={item.status} />
+                          {near ? (
+                            <span className="badge green">Nearby</span>
+                          ) : (
+                            <ChevronRight size={15} />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {!visible.length && (
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyTitle>No assignments</EmptyTitle>
+                        <EmptyDescription>
+                          Assigned cases will appear here.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  )}
+                </>
+              ) : !c ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>No case selected</EmptyTitle>
+                    <EmptyDescription>
+                      You have no assigned cases yet.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : screen === "details" ? (
+                <>
+                  <div className="flexline wrap">
+                    <StatusBadge status={c.status} />
+                    <span className="badge amber">Suspected violation</span>
+                  </div>
+                  <h1 style={{ fontSize: 24, margin: "15px 0 8px" }}>
+                    {c.area}
+                  </h1>
+                  <p className="subtext" style={{ marginBottom: 16 }}>
+                    <MapPin size={13} style={{ display: "inline" }} />{" "}
+                    {c.region} · {c.lat.toFixed(4)}, {c.lng.toFixed(4)}
+                  </p>
+                  <MiningMap cases={[c]} detail image={c.image} polygons />
+                  <p className="subtext" style={{ fontSize: 10 }}>
+                    Illustrative imagery · fictional overlays · sample capture:{" "}
+                    {c.capture}
+                  </p>
+                  <h3 style={{ marginTop: 21 }}>{c.title}</h3>
+                  <p
+                    className="subtext"
+                    style={{ lineHeight: 1.8, marginTop: 8 }}
+                  >
+                    {c.observations}
+                  </p>
+                  <div className="flexline" style={{ marginTop: 12 }}>
+                    {c.models.map((m) => (
+                      <span className="badge" key={m}>
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                  <Flow status={c.status} />
+                  <div className="sectiontitle">Inspection outcome</div>
+                  <Note>
+                    {c.inspection?.outcome || "Awaiting field verification"}
+                  </Note>
+                  <div className="sectiontitle">Inspection history</div>
+                  <div className="timeline">
+                    {c.history.map((h, i) => (
+                      <div className="timeline-item" key={i}>
+                        {h.event}
+                        <p>{displayTime(h.at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <Btn className="full" onClick={() => setScreen("map")}>
+                    <Navigation />
+                    Map & navigation
+                  </Btn>
+                  {actionable && (
+                    <Btn
+                      primary
+                      className="full"
+                      style={{ marginTop: 10 }}
+                      onClick={() => setScreen("gps")}
+                    >
+                      <Crosshair />
+                      Verify location & inspect
+                    </Btn>
+                  )}
+                </>
+              ) : screen === "map" ? (
+                <>
+                  <h2>{c.area}</h2>
+                  <p className="subtext" style={{ marginBottom: 16 }}>
+                    Assigned destination · {c.region}
+                  </p>
+                  <MiningMap
+                    cases={cases}
+                    selected={c.id}
+                    onSelect={selectCase}
+                  />
+                  <div
+                    className="panelbody panel"
+                    style={{ marginTop: 17, padding: 15 }}
+                  >
+                    <div className="flexline">
+                      <MapPin size={20} color="#2d8676" />
+                      <div>
+                        <span className="caseid">{c.id}</span>
+                        <p className="subtext" style={{ fontSize: 12 }}>
+                          {c.lat.toFixed(5)}° N, {c.lng.toFixed(5)}° E
+                        </p>
+                      </div>
+                    </div>
+                    <p
+                      className="subtext"
+                      style={{ fontSize: 12, marginTop: 12 }}
+                    >
+                      Distance:{" "}
+                      {distance === null
+                        ? "check GPS first"
+                        : `${(distance / 1000).toFixed(2)} km straight-line`}
+                    </p>
+                  </div>
+                  <a
+                    className="btn primary full"
+                    style={{ marginTop: 18 }}
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=driving`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Navigation size={16} />
+                    Open navigation <ExternalLink size={14} />
+                  </a>
+                  <p
+                    className="subtext"
+                    style={{ fontSize: 11, margin: "8px 0 18px" }}
+                  >
+                    Opens directions in Google Maps. Routes are provided there.
+                  </p>
+                  <Btn className="full" onClick={() => setScreen("gps")}>
+                    <Crosshair />
+                    Verify on-site location
+                  </Btn>
+                </>
+              ) : screen === "gps" ? (
+                <>
+                  <h2>{c.area}</h2>
+                  <p className="subtext">Check in at the assigned location.</p>
+                  {gpsCard}
+                  {gpsError && (
+                    <p
+                      className="error"
+                      role="alert"
+                      style={{ marginBottom: 14 }}
+                    >
+                      {gpsError}
+                    </p>
+                  )}
+                  <Btn className="full" disabled={locating} onClick={locate}>
+                    {locating ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Crosshair />
+                    )}
+                    {locating ? "Getting GPS position…" : "Use phone GPS"}
+                  </Btn>
+                  <Btn
+                    primary
+                    className="full"
+                    style={{ marginTop: 12 }}
+                    disabled={!verified || !actionable}
+                    onClick={beginInspection}
+                  >
+                    {verified ? <CheckCircle2 /> : <LockKeyhole />}
+                    {c.status === "Under Inspection"
+                      ? "Continue inspection"
+                      : "Start on-site inspection"}
+                  </Btn>
+                  <p
+                    className="subtext"
+                    style={{ fontSize: 12, lineHeight: 1.75, marginTop: 12 }}
+                  >
+                    On-site updates require a recent GPS fix within {threshold}{" "}
+                    m, including the reported accuracy.
+                  </p>
+                  <details className="demo-controls">
+                    <summary
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Try demo location scenarios
+                    </summary>
+                    <p>
+                      Use clearly labeled simulated GPS to explore the prototype
+                      without visiting the site.
+                    </p>
+                    <Btn onClick={() => simulate(true)}>Simulate on site</Btn>
+                    <Btn onClick={() => simulate(false)}>
+                      Simulate outside radius
+                    </Btn>
+                  </details>
+                </>
+              ) : screen === "form" ? (
+                <>
+                  <div className={`note ${verified ? "" : "amber"}`}>
+                    <ShieldCheck />
+                    <div>
+                      <strong>
+                        {verified
+                          ? "Location verified"
+                          : "Location needs verification"}
+                      </strong>
+                      <div style={{ fontSize: 11 }}>
+                        {gps?.source} · {Math.round(distance || 0)} m from site
+                      </div>
+                    </div>
+                  </div>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      submit();
+                    }}
+                  >
+                    <label className="field">
+                      <span>Inspection observations *</span>
+                      <textarea
+                        required
+                        rows={4}
+                        placeholder="Describe site activity, permit checks, and evidence observed…"
+                        value={observations}
+                        onChange={(e) => setObservations(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Site photographs</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        capture="environment"
+                        ref={photoInput}
+                        hidden
+                        onChange={(e) => addPhotos(e.target.files)}
+                      />
+                      <Btn
+                        type="button"
+                        className="full"
+                        disabled={photoBusy}
+                        onClick={() => photoInput.current?.click()}
+                      >
+                        <Camera />
+                        {photoBusy
+                          ? "Adding photographs…"
+                          : "Take or upload photographs"}
+                      </Btn>
+                      <small className="muted" style={{ fontSize: 11 }}>
+                        Up to 6 photos · 10 MB each · optional
+                      </small>
+                    </label>
+                    {photos.length > 0 && (
+                      <div className="photogrid">
+                        {photos.map((p, i) => (
+                          <div key={i} style={{ position: "relative" }}>
+                            <img src={p} alt={`Site photograph ${i + 1}`} />
+                            <button
+                              type="button"
+                              aria-label={`Remove photograph ${i + 1}`}
+                              style={{
+                                position: "absolute",
+                                top: 1,
+                                right: 1,
+                                background: "white",
+                                borderRadius: 20,
+                              }}
+                              onClick={() =>
+                                setPhotos((old) =>
+                                  old.filter((_, j) => j !== i),
+                                )
+                              }
+                            >
+                              <X size={15} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className="field">
+                      <span>Inspection outcome *</span>
+                      <Pick
+                        value={outcome}
+                        onChange={setOutcome}
+                        options={[
+                          { value: "none", label: "Select an outcome" },
+                          ...OUTCOMES,
+                        ]}
+                        label="Inspection outcome"
+                      />
+                    </label>
+                    <p className="subtext" style={{ fontSize: 11 }}>
+                      The outcome is recorded separately. Submitting changes the
+                      case status to Inspection Submitted.
+                    </p>
+                    <div className="gps-meta" style={{ marginTop: 20 }}>
+                      <div>
+                        GPS coordinates
+                        <strong>
+                          {gps?.lat.toFixed(5)}, {gps?.lng.toFixed(5)}
+                        </strong>
+                      </div>
+                      <div>
+                        Submission time<strong>Captured on submission</strong>
+                      </div>
+                    </div>
+                    {formError && (
+                      <p
+                        className="error"
+                        role="alert"
+                        style={{ marginTop: 15 }}
+                      >
+                        {formError}
+                      </p>
+                    )}
+                    {!verified && (
+                      <Btn
+                        type="button"
+                        className="full"
+                        style={{ marginTop: 15 }}
+                        onClick={() => setScreen("gps")}
+                      >
+                        Verify location again
+                      </Btn>
+                    )}
+                    <Btn
+                      type="submit"
+                      primary
+                      className="full"
+                      style={{ marginTop: 24 }}
+                      disabled={
+                        !verified ||
+                        !observations.trim() ||
+                        outcome === "none" ||
+                        photoBusy
+                      }
+                    >
+                      <Send />
+                      Submit inspection update
+                    </Btn>
+                  </form>
+                </>
+              ) : screen === "success" && c.inspection ? (
+                <div className="submission-success">
+                  <div className="success-icon">
+                    <CheckCircle2 />
+                  </div>
+                  <h1>Inspection submitted</h1>
+                  <p>
+                    Your update is linked to the case and ready for operator
+                    review.
+                  </p>
+                  <div className="submission-receipt">
+                    <div className="info-item">
+                      <span>Case ID</span>
+                      <strong className="caseid">{c.id}</strong>
+                    </div>
+                    <div className="info-item">
+                      <span>Case status</span>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <div className="info-item">
+                      <span>Inspection outcome</span>
+                      <p>{c.inspection.outcome}</p>
+                    </div>
+                    <div className="info-item">
+                      <span>Location & source</span>
+                      <p className="mono">
+                        {c.inspection.lat.toFixed(5)},{" "}
+                        {c.inspection.lng.toFixed(5)}
+                      </p>
+                      <small className="muted">
+                        {c.inspection.source} · ±{c.inspection.accuracy} m
+                      </small>
+                    </div>
+                    <div className="info-item">
+                      <span>Submitted at</span>
+                      <p>{displayTime(c.inspection.at)}</p>
+                    </div>
+                    <div className="info-item" style={{ margin: 0 }}>
+                      <span>Photographs</span>
+                      <p>{c.inspection.photos.length} attached</p>
+                    </div>
+                  </div>
+                  <Btn
+                    primary
+                    className="full"
+                    onClick={() => setScreen("cases")}
+                  >
+                    Back to assigned cases <ArrowRight />
+                  </Btn>
+                  <p style={{ fontSize: 11 }}>
+                    Saved within this prototype session.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+            {user && (
+              <nav className="phonebottom">
+                <button
+                  className={
+                    ["cases", "details", "form", "success"].includes(screen)
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => setScreen("cases")}
+                >
+                  <FolderOpen />
+                  My cases
+                </button>
+                <button
+                  className={screen === "map" ? "active" : ""}
+                  onClick={() => setScreen("map")}
+                >
+                  <MapIcon />
+                  Map
+                </button>
+                <button
+                  className={screen === "gps" ? "active" : ""}
+                  onClick={() => setScreen("gps")}
+                >
+                  <Crosshair />
+                  GPS
+                </button>
+              </nav>
+            )}
+          </div>
+          {!user && (
+            <div className="preview-back">
+              <button className="textbtn" onClick={onExit}>
+                <ChevronLeft size={15} />
+                Back to web login
+              </button>
+            </div>
+          )}
+        </div>
+        <aside className="mobile-side">
+          <div>
+            <span className="badge outline">
+              <ShieldCheck size={12} />
+              Field verification
+            </span>
+            <p>
+              Assigned cases remain visible at any distance. GPS highlights
+              nearby cases and enables on-site updates.
+            </p>
+            <div className="panel" style={{ padding: 17, marginTop: 23 }}>
+              <span className="small muted">Verification radius</span>
+              <div style={{ fontSize: 30, marginTop: 4, fontWeight: 600 }}>
+                {threshold}{" "}
+                <span
+                  style={{ fontSize: 16, fontWeight: 400, color: "#8b9aa3" }}
+                >
+                  metres
+                </span>
+              </div>
+              <p style={{ fontSize: 12, marginTop: 5 }}>
+                Configured by the administrator.
+              </p>
+            </div>
+          </div>
+          <div>
+            <div className="sectiontitle">Connected to your workspace</div>
+            <p style={{ fontSize: 13 }}>
+              The same Case IDs, assignments, inspection outcomes and status
+              changes appear in the web dashboard and reports.
+            </p>
+            <div className="note" style={{ marginTop: 22 }}>
+              <FlaskConical />
+              This is a simulated field workflow. No real investigations are
+              recorded.
+            </div>
+          </div>
+        </aside>
+      </div>
+    </>
+  );
 }
