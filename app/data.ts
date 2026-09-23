@@ -50,7 +50,7 @@ export const AREAS = [
   { name: "Dima · Survey C", region: "Gambela", lat: 6.62, lng: 35.45 },
   {
     name: "Asosa · Survey D",
-    region: "Benishangul-Gumuz",
+    region: "Benishangul-Gumuze",
     lat: 10.06,
     lng: 34.53,
   },
