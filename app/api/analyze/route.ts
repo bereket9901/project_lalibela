@@ -124,13 +124,13 @@ function parseJson(text: string): AIAnalysisResult {
 }
 
 async function analyzeWithOllama({
-  model,
   prompt,
   image,
+  model = "huihui_ai/qwen3-vl-abliterated:8b-instruct",
 }: {
-  model: string;
   prompt: string;
   image: string;
+  model?: string;
 }): Promise<AIAnalysisResult> {
   const ollamaUrl = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
 
@@ -300,7 +300,6 @@ export async function POST(req: NextRequest) {
       });
     } else if (provider === "ollama") {
       result = await analyzeWithOllama({
-        model,
         prompt,
         image,
       });
