@@ -124,6 +124,8 @@ import {
   type User,
   type Status,
   type Inspection,
+  Models,
+  MODELS_DETAIL,
 } from "./data";
 
 type Page =
@@ -154,6 +156,7 @@ type Finding = {
   models: string[];
   image?: string;
   imageName: string;
+  category?: string;
 };
 const STATUS_COLORS = ["#91a4b1", "#658ab0", "#dda54c", "#9186b2", "#559381"];
 const statusTone = (s: string) =>
@@ -1908,100 +1911,286 @@ function Analysis({
   inspectors: User[];
   createCase: (f: Finding, observations: string, inspector: string) => void;
 }) {
-  const [area, setArea] = useState(AREAS[0].name),
-    [capture, setCapture] = useState("2026-09-16"),
-    [models, setModels] = useState(enabledModels),
-    [fileName, setFileName] = useState("Shakiso_Survey-A_sample.jpg"),
-    [preview, setPreview] = useState<string>(),
-    [progress, setProgress] = useState(0),
-    [running, setRunning] = useState(false),
-    [resultSet, setResultSet] = useState<string[]>(
-      findings.slice(0, 3).map((f) => f.id),
-    ),
-    [newCase, setNewCase] = useState<Finding | null>(null),
-    [observation, setObservation] = useState(""),
-    [assignee, setAssignee] = useState("none"),
-    [imageError, setImageError] = useState("");
-  const upload = useRef<HTMLInputElement>(null),
-    timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearInterval(timer.current);
-    },
-    [],
+  const [area, setArea] = useState(AREAS[0].name);
+
+  const [capture, setCapture] = useState("2026-09-16");
+
+  const [models, setModels] = useState(enabledModels);
+
+  const [fileName, setFileName] = useState("Shakiso_Survey-A_sample.jpg");
+
+  const [preview, setPreview] = useState<string>();
+
+  const [progress, setProgress] = useState(0);
+
+  const [running, setRunning] = useState(false);
+
+  const [resultSet, setResultSet] = useState<string[]>(
+    findings.slice(0, 3).map((f) => f.id),
   );
+
+  const [newCase, setNewCase] = useState<Finding | null>(null);
+
+  const [observation, setObservation] = useState("");
+
+  const [assignee, setAssignee] = useState("none");
+
+  const [imageError, setImageError] = useState("");
+
+  const [analysisError, setAnalysisError] = useState("");
+
+  const upload = useRef<HTMLInputElement>(null);
+
   const current = findings.filter((f) => resultSet.includes(f.id));
+
   const acceptImage = (file: File | undefined) => {
     if (!file) return;
+
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setImageError(
-        "For this prototype, upload a JPEG, PNG or WebP preview. GeoTIFF ingestion is represented by the sample imagery flow.",
-      );
+      setImageError("Upload a JPEG, PNG or WebP image.");
       return;
     }
+
     if (file.size > 20 * 1024 * 1024) {
-      setImageError("Choose a preview image smaller than 20 MB.");
+      setImageError("Choose an image smaller than 20 MB.");
       return;
     }
+
     setImageError("");
+    setAnalysisError("");
+
     setFileName(file.name);
     setPreview(URL.createObjectURL(file));
+
     setResultSet([]);
     setProgress(0);
   };
-  const run = () => {
-    if (!models.length || !capture || !fileName || running) return;
-    setProgress(0);
+
+  const fileToBase64 = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = reader.result as string;
+
+        const base64 = result.split(",")[1];
+
+        resolve(base64);
+      };
+
+      reader.onerror = () => reject(new Error("Could not read image."));
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const getSelectedFile = async () => {
+    const input = upload.current;
+
+    const file = input?.files?.[0];
+
+    if (!file) {
+      throw new Error("Please upload an image first.");
+    }
+
+    return file;
+  };
+
+  const buildPrompt = () => {
+    const location = AREAS.find((a) => a.name === area);
+
+    return `
+You are analyzing satellite imagery for a
+mining-area monitoring system.
+
+Location:
+${area}
+
+Approximate coordinates:
+${location?.lat ?? "unknown"} N,
+${location?.lng ?? "unknown"} E
+
+Capture date:
+${capture}
+
+Analyze ONLY what is visually supported by
+the provided image.
+
+Look for possible signs of:
+
+- open-pit excavation
+- exposed or disturbed ground
+- mining access roads
+- vegetation clearance
+- waste rock
+- tailings or sediment deposits
+- disturbed waterways
+- ponds associated with excavation
+- unusual earth-moving activity
+- other visually significant land disturbance
+
+For every finding:
+
+1. Give it a short title.
+2. Describe the visible evidence.
+3. Give a visual confidence from 0 to 100.
+4. Assign a category.
+
+Important:
+
+Do NOT claim that something is illegal.
+
+Do NOT assume that an activity is unauthorized.
+
+Do NOT invent evidence that cannot be seen.
+
+Agriculture, construction, natural erosion,
+roads and other legitimate activities may
+look similar to mining.
+
+Only report findings that are worth human
+field verification.
+
+Return the requested JSON structure.
+`;
+  };
+
+  const run = async () => {
+    if (running || !models.length || !capture) {
+      return;
+    }
+
     setRunning(true);
+    setProgress(5);
     setResultSet([]);
-    let p = 0;
-    timer.current = setInterval(() => {
-      p += 10;
-      setProgress(p);
-      if (p >= 100) {
-        clearInterval(timer.current!);
-        timer.current = null;
-        const a = AREAS.find((a) => a.name === area)!;
-        const stamp = Date.now();
-        const batch: Finding[] = [
-          {
-            title: "Possible excavation footprint",
-            description:
-              "Irregular exposed ground and pit-like features are visible in the highlighted zone. Check activity and permit boundaries on site.",
-            confidence: 94,
-          },
-          {
-            title: "Vegetation clearance near access track",
-            description:
-              "A connected bare-ground pattern may indicate a new access route. Agricultural or construction activity is also possible.",
-            confidence: 87,
-          },
-          {
-            title: "Possible sediment or tailings deposit",
-            description:
-              "A contrasting surface texture may indicate disturbed material. Field evidence is needed to establish the cause.",
-            confidence: 78,
-          },
-        ].map((f, i) => ({
-          ...f,
-          id: `F-${stamp}-${i}`,
-          created: new Date(stamp).toISOString().slice(0, 10),
-          reviewed: false,
-          area: a,
-          capture,
-          models: [...models],
-          image: preview,
-          imageName: fileName,
-        }));
-        setFindings((old) => [...batch, ...old]);
-        setResultSet(batch.map((f) => f.id));
-        setRunning(false);
-        toast.success(
-          "Simulated analysis complete. 3 suspected findings ready for review.",
-        );
+    setAnalysisError("");
+
+    try {
+      const file = await getSelectedFile();
+
+      setProgress(15);
+
+      const image = await fileToBase64(file);
+
+      setProgress(25);
+
+      const prompt = buildPrompt();
+
+      const selectedModels = MODELS_DETAIL.filter((m) => models.includes(m.id));
+
+      if (!selectedModels.length) {
+        throw new Error("No valid AI models selected.");
       }
-    }, 320);
+
+      const results = await Promise.all(
+        selectedModels.map(async (model, index) => {
+          const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              provider: model.provider,
+
+              model: model.id,
+
+              prompt,
+
+              image,
+
+              mediaType: file.type,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => null);
+
+            throw new Error(
+              `${model.name}: ${error?.error || "Analysis failed"}`,
+            );
+          }
+
+          const data = await response.json();
+
+          setProgress(
+            30 + Math.round(((index + 1) / selectedModels.length) * 50),
+          );
+
+          return {
+            model,
+            data,
+          };
+        }),
+      );
+
+      setProgress(85);
+
+      const stamp = Date.now();
+
+      const areaData = AREAS.find((a) => a.name === area)!;
+
+      const generatedFindings: Finding[] = results.flatMap(({ model, data }) =>
+        (data.findings || []).map(
+          (
+            finding: {
+              title: string;
+              description: string;
+              confidence: number;
+              category: string;
+            },
+            index: number,
+          ) => ({
+            id: `F-${stamp}-${model.id}-${index}`,
+
+            title: finding.title,
+
+            description: finding.description,
+
+            confidence: Math.max(
+              0,
+              Math.min(100, Number(finding.confidence) || 0),
+            ),
+
+            created: new Date(stamp).toISOString().slice(0, 10),
+
+            reviewed: false,
+
+            area: areaData,
+
+            capture,
+
+            models: [model.name],
+
+            image: preview,
+
+            imageName: fileName,
+
+            category: finding.category,
+          }),
+        ),
+      );
+
+      setFindings((old) => [...generatedFindings, ...old]);
+
+      setResultSet(generatedFindings.map((f) => f.id));
+
+      setProgress(100);
+
+      toast.success(
+        `AI analysis complete. ${generatedFindings.length} findings generated.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "AI analysis failed.";
+
+      setAnalysisError(message);
+
+      toast.error(message);
+    } finally {
+      setRunning(false);
+    }
   };
+
   return (
     <>
       <PageHead
@@ -2009,17 +2198,22 @@ function Analysis({
         subtitle="Turn satellite imagery into reviewable findings and field assignments."
       >
         <span className="demo-label">
-          <FlaskConical />
-          SIMULATED AI ANALYSIS
+          <ScanLine />
+          AI-POWERED ANALYSIS
         </span>
       </PageHead>
+
       <div className="analysis-layout">
         <div className="stack">
+          {/* IMAGE UPLOAD */}
+
           <section className="panel">
             <div className="panelhead flexline">
               <Upload size={18} color="#3b8073" />
+
               <h2>1. Prepare imagery</h2>
             </div>
+
             <div className="panelbody">
               <input
                 ref={upload}
@@ -2028,41 +2222,88 @@ function Analysis({
                 hidden
                 onChange={(e) => acceptImage(e.target.files?.[0])}
               />
+
               <div
                 className="uploadzone"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (!running) acceptImage(e.dataTransfer.files[0]);
+
+                  if (!running) {
+                    acceptImage(e.dataTransfer.files[0]);
+                  }
                 }}
               >
                 <Upload />
+
                 <p>Drop satellite imagery here</p>
+
                 <small>JPEG, PNG or WebP · up to 20 MB</small>
+
                 <Btn disabled={running} onClick={() => upload.current?.click()}>
                   Browse files
                 </Btn>
               </div>
+
               {imageError && (
-                <p className="error" style={{ marginTop: 10 }}>
+                <p
+                  className="error"
+                  style={{
+                    marginTop: 10,
+                  }}
+                >
                   {imageError}
                 </p>
               )}
+
+              {analysisError && (
+                <p
+                  className="error"
+                  style={{
+                    marginTop: 10,
+                  }}
+                >
+                  {analysisError}
+                </p>
+              )}
+
               <div className="filechip">
                 <FileImage />
-                <div className="grow" style={{ minWidth: 0 }}>
-                  <div style={{ wordBreak: "break-all" }}>{fileName}</div>
+
+                <div
+                  className="grow"
+                  style={{
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {fileName}
+                  </div>
+
                   <small className="muted">
                     {preview
-                      ? "Local preview · session only"
-                      : "Illustrative sample imagery"}
+                      ? "Local preview · ready for AI analysis"
+                      : "Upload imagery to begin"}
                   </small>
                 </div>
+
                 <CheckCircle2 size={17} />
               </div>
-              <div className="stack" style={{ marginTop: 20, gap: 15 }}>
+
+              <div
+                className="stack"
+                style={{
+                  marginTop: 20,
+                  gap: 15,
+                }}
+              >
                 <label className="field">
                   <span>Mining area / location</span>
+
                   <Pick
                     value={area}
                     onChange={setArea}
@@ -2070,112 +2311,161 @@ function Analysis({
                     label="Imagery location"
                   />
                 </label>
+
                 <label className="field">
-                  <span>Capture date {preview ? "" : "(sample metadata)"}</span>
+                  <span>Capture date</span>
+
                   <input
                     type="date"
                     required
                     value={capture}
-                    max="2026-09-17"
                     onChange={(e) => setCapture(e.target.value)}
                   />
                 </label>
+
                 <div className="small muted">
-                  <MapPin size={13} style={{ display: "inline" }} />{" "}
+                  <MapPin
+                    size={13}
+                    style={{
+                      display: "inline",
+                    }}
+                  />{" "}
                   {AREAS.find((a) => a.name === area)?.lat.toFixed(4)}° N,{" "}
                   {AREAS.find((a) => a.name === area)?.lng.toFixed(4)}° E
                 </div>
               </div>
             </div>
           </section>
+
+          {/* MODEL SELECTION */}
+
           <section className="panel">
             <div className="panelhead flexline">
               <ScanLine size={18} color="#3b8073" />
+
               <h2>2. Select AI models</h2>
             </div>
+
             <div className="panelbody">
-              <p className="subtext" style={{ marginTop: 0 }}>
-                Compare one or more models on the same imagery.
+              <p
+                className="subtext"
+                style={{
+                  marginTop: 0,
+                }}
+              >
+                Analyze the same imagery using cloud and/or local vision models.
               </p>
+
               <div className="modelchoices">
-                {MODELS.map((m) => (
+                {MODELS.map((model) => (
                   <label
-                    className={`modelcard ${models.includes(m) ? "checked" : ""}`}
-                    key={m}
+                    className={`modelcard ${
+                      models.includes(model) ? "checked" : ""
+                    }`}
+                    key={model}
                   >
                     <Checkbox
-                      disabled={!enabledModels.includes(m) || running}
-                      checked={models.includes(m)}
-                      onCheckedChange={(v) =>
+                      disabled={!enabledModels.includes(model) || running}
+                      checked={models.includes(model)}
+                      onCheckedChange={(value) =>
                         setModels((old) =>
-                          v ? [...old, m] : old.filter((x) => x !== m),
+                          value
+                            ? [...old, model]
+                            : old.filter((x) => x !== model),
                         )
                       }
-                      aria-label={`Use ${m}`}
+                      aria-label={`Use ${MODELS_DETAIL?.find((m) => m.id == model)?.name}`}
                     />
-                    {m}
+
+                    <div>
+                      <div>
+                        {MODELS_DETAIL?.find((m) => m.id == model)?.name}
+                      </div>
+
+                      <small className="muted">
+                        {MODELS_DETAIL?.find((m) => m.id == model)?.type ===
+                        "local"
+                          ? "Local · Ollama"
+                          : "Cloud · Gemini"}
+                      </small>
+                    </div>
                   </label>
                 ))}
               </div>
+
               {!enabledModels.length && (
                 <p className="error">
                   An administrator must enable at least one model in Settings.
                 </p>
               )}
+
               <Btn
                 primary
                 className="full"
-                disabled={
-                  running ||
-                  !models.length ||
-                  !capture ||
-                  capture > "2026-09-17"
-                }
+                disabled={running || !models.length || !preview || !capture}
                 onClick={run}
               >
                 {running ? <Loader2 className="animate-spin" /> : <ScanLine />}
-                {running ? "Analyzing imagery…" : "Run simulated analysis"}
+
+                {running ? "Analyzing imagery…" : "Run AI analysis"}
               </Btn>
+
               {running && (
                 <div className="progressbox">
                   <div
                     className="between small muted"
-                    style={{ marginBottom: 8 }}
+                    style={{
+                      marginBottom: 8,
+                    }}
                   >
                     <span>
-                      {progress < 30
+                      {progress < 25
                         ? "Preparing imagery"
                         : progress < 80
-                          ? "Comparing model findings"
-                          : "Compiling results"}
+                          ? "Running vision models"
+                          : "Compiling findings"}
                     </span>
+
                     <span>{progress}%</span>
                   </div>
+
                   <Progress value={progress} />
                 </div>
               )}
+
               <p
                 className="subtext"
-                style={{ fontSize: 12, lineHeight: 1.7, marginTop: 13 }}
+                style={{
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                  marginTop: 13,
+                }}
               >
-                This demo returns fixed sample findings. Images are not sent to
-                Qwen, Gemini, or Claude.
+                Gemini sends imagery to Google's API. Ollama runs the selected
+                vision model locally. AI findings are preliminary and require
+                human verification.
               </p>
             </div>
           </section>
         </div>
+
+        {/* RIGHT SIDE */}
+
         <div className="stack">
           <section className="panel">
             <div className="panelhead between">
               <div>
                 <h2>Imagery review</h2>
+
                 <p className="subtext">{current[0]?.area.name || area}</p>
               </div>
+
               <span className="badge outline">
                 <Satellite size={12} />
                 Satellite
               </span>
             </div>
+
             <MiningMap
               cases={[]}
               detail
@@ -2183,19 +2473,26 @@ function Analysis({
               polygons={!!current.length}
               running={running}
             />
+
             <div className="maplegend">
               <span>
                 <i className="legend-dot" />
                 Suspected activity
               </span>
-              <span>Shakiso sample basemap · fictional overlays</span>
+
+              <span>AI-generated findings</span>
             </div>
           </section>
+
+          {/* FINDINGS */}
+
           <section className="panel">
             <div className="panelhead between">
               <h2>3. Review findings</h2>
+
               <span className="badge">{current.length} findings</span>
             </div>
+
             <div className="panelbody">
               {!current.length ? (
                 <Empty>
@@ -2203,19 +2500,22 @@ function Analysis({
                     <EmptyTitle>
                       {running ? "Analysis in progress" : "Ready when you are"}
                     </EmptyTitle>
+
                     <EmptyDescription>
                       {running
-                        ? "Reviewable findings will appear here shortly."
-                        : "Choose models and run an analysis to identify areas for review."}
+                        ? "AI findings will appear here."
+                        : "Upload imagery, select an AI model and run an analysis."}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               ) : (
                 <>
                   <Note amber>
-                    AI identifies suspected violations. Model scores indicate
-                    simulated visual confidence, not proof of illegal activity.
+                    AI identifies visually suspected activity. Results are not
+                    proof of illegal activity and should be verified using field
+                    evidence and applicable records.
                   </Note>
+
                   {current.map((f, i) => (
                     <div
                       className={`finding ${f.reviewed ? "active" : ""}`}
@@ -2224,31 +2524,44 @@ function Analysis({
                       <div className="between">
                         <div className="flexline">
                           <span className="badge amber">{i + 1}</span>
+
                           <h3>{f.title}</h3>
                         </div>
+
                         <span className="badge outline">{f.confidence}%</span>
                       </div>
+
                       <p>{f.description}</p>
+
                       <div className="flexline wrap">
-                        {f.models.map((m, j) => (
-                          <span className="badge" key={m}>
-                            {m} · {f.confidence - j * 2}%
+                        {f.models.map((model) => (
+                          <span className="badge" key={model}>
+                            {model}
                           </span>
                         ))}
-                        <span className="badge amber">Suspected violation</span>
+
+                        <span className="badge amber">AI finding</span>
                       </div>
+
                       <div className="finding-footer between">
                         <label
                           className="flexline small"
-                          style={{ cursor: "pointer" }}
+                          style={{
+                            cursor: "pointer",
+                          }}
                         >
                           <Checkbox
                             checked={f.reviewed}
                             disabled={!!f.caseId}
-                            onCheckedChange={(v) =>
+                            onCheckedChange={(value) =>
                               setFindings((old) =>
-                                old.map((x) =>
-                                  x.id === f.id ? { ...x, reviewed: !!v } : x,
+                                old.map((item) =>
+                                  item.id === f.id
+                                    ? {
+                                        ...item,
+                                        reviewed: !!value,
+                                      }
+                                    : item,
                                 ),
                               )
                             }
@@ -2256,6 +2569,7 @@ function Analysis({
                           />
                           Reviewed by operator
                         </label>
+
                         {f.caseId ? (
                           <span className="caseid">{f.caseId}</span>
                         ) : (
@@ -2264,7 +2578,9 @@ function Analysis({
                             disabled={!f.reviewed}
                             onClick={() => {
                               setNewCase(f);
+
                               setObservation(f.description);
+
                               setAssignee("none");
                             }}
                           >
@@ -2281,66 +2597,103 @@ function Analysis({
           </section>
         </div>
       </div>
+
+      {/* CASE DIALOG */}
+
       <Dialog
         open={!!newCase}
-        onOpenChange={(v) => {
-          if (!v) setNewCase(null);
+        onOpenChange={(value) => {
+          if (!value) {
+            setNewCase(null);
+          }
         }}
       >
-        <DialogContent style={{ background: "#fff" }}>
+        <DialogContent
+          style={{
+            background: "#fff",
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Create investigation case</DialogTitle>
+
             <DialogDescription>
               The reviewed finding and imagery will be linked to a unique Case
               ID.
             </DialogDescription>
           </DialogHeader>
-          <div className="badge amber">AI suspected violation</div>
+
+          <div className="badge amber">AI suspected activity</div>
+
           <h3>{newCase?.title}</h3>
+
           <form
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!newCase || !observation.trim()) return;
+
+              if (!newCase || !observation.trim()) {
+                return;
+              }
+
               createCase(
                 newCase,
                 observation.trim(),
                 assignee === "none" ? "" : assignee,
               );
+
               setNewCase(null);
             }}
           >
             <label className="field">
               <span>Operator observations</span>
+
               <textarea
                 value={observation}
                 onChange={(e) => setObservation(e.target.value)}
                 required
               />
             </label>
+
             <label className="field">
               <span>Field inspector</span>
+
               <Pick
                 value={assignee}
                 onChange={setAssignee}
                 options={[
-                  { value: "none", label: "Leave unassigned — New case" },
-                  ...inspectors.map((u) => ({ value: u.id, label: u.name })),
+                  {
+                    value: "none",
+                    label: "Leave unassigned — New case",
+                  },
+                  ...inspectors.map((u) => ({
+                    value: u.id,
+                    label: u.name,
+                  })),
                 ]}
                 label="Assign new case to inspector"
               />
             </label>
+
             <div className="filechip">
               <FileImage />
+
               <div>
                 {newCase?.imageName}
-                <small className="muted" style={{ display: "block" }}>
+
+                <small
+                  className="muted"
+                  style={{
+                    display: "block",
+                  }}
+                >
                   Imagery, capture date, models and finding attached
                 </small>
               </div>
             </div>
+
             <Btn primary type="submit">
               {assignee === "none" ? "Create new case" : "Create & assign case"}
+
               <ArrowRight />
             </Btn>
           </form>
@@ -2349,6 +2702,7 @@ function Analysis({
     </>
   );
 }
+
 function Reports({
   cases,
   pending,
